@@ -15,42 +15,6 @@ export default async function Home({
   const guildName = settings?.guildName ?? "Squadron";
   const currentOpId = settings?.currentOpId?.trim() || "current";
   const discordId = (session?.user as any)?.discordId;
-
-  try {
-    const rawDatabaseUrl = process.env.DATABASE_URL ?? "";
-    const databaseUrl = new URL(rawDatabaseUrl);
-    console.error(
-      "[DB-ENV-DIAG]",
-      JSON.stringify({
-        host: databaseUrl.hostname,
-        port: databaseUrl.port || "5432",
-        database: databaseUrl.pathname.replace(/^\//, ""),
-      })
-    );
-  } catch (error) {
-    console.error("[DB-ENV-DIAG-ERROR]", String(error));
-  }
-
-  try {
-    const dbDiag = await prisma.$queryRaw`SELECT
-      current_database() AS database,
-      current_schema() AS schema,
-      inet_server_addr()::text AS address,
-      EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'Submission' AND column_name = 'opId'
-      ) AS "hasSubmissionOpId",
-      (SELECT COUNT(*) FROM "Settings") AS "settingsRows"`;
-    console.error(
-      "[DB-DIAG]",
-      JSON.stringify(dbDiag, (_, value) =>
-        typeof value === "bigint" ? value.toString() : value
-      )
-    );
-  } catch (error) {
-    console.error("[DB-DIAG-ERROR]", error);
-  }
-
   const alreadySubmitted = Boolean(
     discordId &&
       (await prisma.submission.findFirst({
