@@ -1,8 +1,20 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/admin";
 import { notifyDiscord } from "@/lib/discord";
+
+function alreadySubmittedResponse() {
+  return NextResponse.json(
+    {
+      error:
+        "You've already submitted for this op. If you need to change your response, please DM a mod or admin.",
+      alreadySubmitted: true,
+    },
+    { status: 409 }
+  );
+}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -15,12 +27,19 @@ export async function POST(req: Request) {
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
   const { ign, attending, hasPilot, pilotName, hours, notes } = body;
+  const settings = await prisma.settings
+    .findUnique({ where: { id: 1 }, select: { currentOpId: true } })
+    .catch(() => null);
+  const opId = settings?.currentOpId?.trim() || "current";
 
   if (typeof ign !== "string" || !ign.trim()) {
     return NextResponse.json({ error: "IGN is required" }, { status: 400 });
   }
   if (typeof attending !== "boolean" || typeof hasPilot !== "boolean") {
-    return NextResponse.json({ error: "Invalid attendance/pilot value" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid attendance/pilot value" },
+      { status: 400 }
+    );
   }
   if (hasPilot && (typeof pilotName !== "string" || !pilotName.trim())) {
     return NextResponse.json({ error: "Pilot name is required" }, { status: 400 });
@@ -30,21 +49,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Hours must be a valid number" }, { status: 400 });
   }
 
-  const submission = await prisma.submission.create({
-    data: {
-      discordId: user.discordId,
-      discordUsername: user.username ?? "Unknown",
-      discordAvatar: user.avatar ?? null,
-      ign: ign.trim(),
-      attending,
-      hasPilot,
-      pilotName: hasPilot ? pilotName.trim() : null,
-      hours: hoursNum,
-      notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
-    },
+  const existing = await prisma.submission.findFirst({
+    where: { opId, discordId: user.discordId },
+    select: { id: true },
   });
+  if (existing) return alreadySubmittedResponse();
+
+  let submission;
+  try {
+    submission = await prisma.submission.create({
+      data: {
+        opId,
+        discordId: user.discordId,
+        discordUsername: user.username ?? "Unknown",
+        discordAvatar: user.avatar ?? null,
+        ign: ign.trim(),
+        attending,
+        hasPilot,
+        pilotName: hasPilot ? pilotName.trim() : null,
+        hours: hoursNum,
+        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return alreadySubmittedResponse();
+    }
+    throw error;
+  }
 
   await notifyDiscord({
+    opId,
     discordUsername: user.username ?? "Unknown",
     ign: submission.ign,
     attending: submission.attending,
