@@ -74,3 +74,9 @@ managed from Admin → Access.
 Colors, surfaces, spacing, controls and card treatment live in src/app/globals.css.
 The existing font-family declarations in src/app/layout.tsx and
 tailwind.config.ts are intentionally unchanged.
+
+## Attendance page freshness
+
+## Attendance page freshness
+
+The attendance page is rendered dynamically and uses zero dynamic client stale time so per-user submission status is refreshed when navigating between attendance and admin. The form also refreshes the current route after submission.
