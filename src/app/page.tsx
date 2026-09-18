@@ -17,15 +17,7 @@ export default async function Home({
   const discordId = (session?.user as any)?.discordId;
 
   try {
-    const dbDiag = await prisma.$queryRaw<
-      Array<{
-        database: string;
-        schema: string;
-        address: string | null;
-        hasSubmissionOpId: boolean;
-        settingsRows: bigint;
-      }>
-    `SELECT
+    const dbDiag = await prisma.$queryRaw`SELECT
       current_database() AS database,
       current_schema() AS schema,
       inet_server_addr()::text AS address,
@@ -34,7 +26,12 @@ export default async function Home({
         WHERE table_schema = 'public' AND table_name = 'Submission' AND column_name = 'opId'
       ) AS "hasSubmissionOpId",
       (SELECT COUNT(*) FROM "Settings") AS "settingsRows"`;
-    console.error("[DB-DIAG]", JSON.stringify(dbDiag, (_, value) => typeof value === "bigint" ? value.toString() : value));
+    console.error(
+      "[DB-DIAG]",
+      JSON.stringify(dbDiag, (_, value) =>
+        typeof value === "bigint" ? value.toString() : value
+      )
+    );
   } catch (error) {
     console.error("[DB-DIAG-ERROR]", error);
   }
