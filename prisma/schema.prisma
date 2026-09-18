@@ -9,6 +9,7 @@ datasource db {
 
 model Submission {
   id                String   @id @default(cuid())
+  opId              String   @default("current")
   discordId         String
   discordUsername   String
   discordAvatar     String?
@@ -20,8 +21,10 @@ model Submission {
   notes             String?
   createdAt         DateTime @default(now())
 
+  @@unique([opId, discordId])
   @@index([discordId])
   @@index([createdAt])
+  @@index([opId])
 }
 
 model AdminUser {
@@ -32,7 +35,8 @@ model AdminUser {
 }
 
 model Settings {
-  id         Int    @id @default(1)
-  webhookUrl String?
-  guildName  String @default("Squadron")
+  id          Int    @id @default(1)
+  webhookUrl  String?
+  guildName   String @default("Squadron")
+  currentOpId String @default("current")
 }
