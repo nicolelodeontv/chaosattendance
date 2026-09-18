@@ -13,29 +13,55 @@ export default async function Home({
     .findUnique({ where: { id: 1 } })
     .catch(() => null);
   const guildName = settings?.guildName ?? "Squadron";
+  const currentOpId = settings?.currentOpId?.trim() || "current";
+  const discordId = (session?.user as any)?.discordId;
+  const alreadySubmitted = Boolean(
+    discordId &&
+      (await prisma.submission.findFirst({
+        where: { opId: currentOpId, discordId },
+        select: { id: true },
+      }))
+  );
 
   return (
     <div className="min-h-screen">
       <Navbar guildName={guildName} />
 
-      <main className="mx-auto max-w-3xl px-5 py-14">
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         {session?.user ? (
           <>
-            <div className="mb-6">
-              <h1 className="font-display text-xl text-ink">Attendance report</h1>
-              <p className="mt-1 text-sm text-ink2">
-                Log your status for this op. Submitting notifies the server.
-              </p>
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-cyan">
+                  Current operation
+                </p>
+                <h1 className="font-display text-2xl tracking-tight text-ink">
+                  Attendance report
+                </h1>
+                <p className="mt-1.5 text-sm leading-6 text-ink2">
+                  Log your status for this op. Each Discord account can submit once.
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-line bg-panel2 px-3 py-1.5 font-display text-xs text-ink2">
+                {currentOpId}
+              </span>
             </div>
-            <AttendanceForm />
+            <AttendanceForm alreadySubmitted={alreadySubmitted} />
           </>
         ) : (
-          <div className="rounded border border-line bg-panel p-8 text-center">
+          <div className="premium-card p-7 sm:p-9">
+            <div className="mb-5 inline-flex rounded-full border border-cyan/30 bg-cyan/10 px-3 py-1 text-xs font-medium text-cyan">
+              Discord verification
+            </div>
             {searchParams.authRequired && (
-              <p className="mb-4 text-sm text-amber">Sign in to continue.</p>
+              <p className="mb-4 rounded-md border border-cyan/30 bg-cyan/5 px-3 py-2 text-sm text-cyan">
+                Sign in to continue.
+              </p>
             )}
-            <h1 className="font-display text-lg text-ink">Sign in to report attendance</h1>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-ink2">
+            <h1 className="font-display text-2xl tracking-tight text-ink">
+              Sign in to report attendance
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-ink2">
               Use your Discord account to submit your IGN, attendance and pilot status for
               this op.
             </p>
@@ -44,9 +70,9 @@ export default async function Home({
                 "use server";
                 await signIn("discord");
               }}
-              className="mt-6"
+              className="mt-7"
             >
-              <button className="rounded border border-amber bg-amber/10 px-5 py-2.5 font-display text-sm text-amber transition-colors hover:bg-amber/20">
+              <button className="premium-button w-full sm:w-auto">
                 Sign in with Discord
               </button>
             </form>
