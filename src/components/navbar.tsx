@@ -2,6 +2,7 @@ import { auth, signOut } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { ThemeToggle } from "./theme-toggle";
 import Image from "next/image";
+import Link from "next/link";
 
 export async function Navbar({ guildName }: { guildName: string }) {
   const session = await auth();
@@ -11,7 +12,11 @@ export async function Navbar({ guildName }: { guildName: string }) {
   return (
     <header className="border-b border-line/80 bg-base/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-3">
+        <Link
+          href="/"
+          className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/60"
+          aria-label="Back to attendance"
+        >
           <span
             className="status-dot h-2 w-2 shadow-[0_0_14px_rgb(var(--cyan)/0.65)]"
             style={{ backgroundColor: "rgb(var(--cyan))" }}
@@ -19,16 +24,16 @@ export async function Navbar({ guildName }: { guildName: string }) {
           <span className="font-display text-sm tracking-tight text-ink">
             {guildName} <span className="text-ink2">/ attendance</span>
           </span>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-2.5">
           {admin && (
-            <a
+            <Link
               href="/admin"
               className="rounded-md px-2.5 py-1.5 text-sm text-ink2 transition-colors hover:bg-panel2 hover:text-cyan"
             >
               Admin
-            </a>
+            </Link>
           )}
           <ThemeToggle />
           {user && (
