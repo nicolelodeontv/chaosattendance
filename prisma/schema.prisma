@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Submission {
+  id                String   @id @default(cuid())
+  discordId         String
+  discordUsername   String
+  discordAvatar     String?
+  ign               String
+  attending         Boolean
+  hasPilot          Boolean
+  pilotName         String?
+  hours             Float
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  @@index([discordId])
+  @@index([createdAt])
+}
+
+model AdminUser {
+  discordId String   @id
+  username  String
+  addedBy   String?
+  createdAt DateTime @default(now())
+}
+
+model Settings {
+  id         Int    @id @default(1)
+  webhookUrl String?
+  guildName  String @default("Squadron")
+}
