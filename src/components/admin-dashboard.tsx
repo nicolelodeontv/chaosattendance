@@ -25,7 +25,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   return (
     <div>
       <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-line bg-panel/70 p-1">
-        (["submissions", "settings", "access"] as Tab[]).map((t) => (
+        {(["submissions", "settings", "access"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -36,7 +36,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
           >
             {t}
           </button>
-        ))
+        ))}
       </div>
 
       {tab === "submissions" && <SubmissionsTab />}
