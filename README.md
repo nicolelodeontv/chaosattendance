@@ -1,112 +1,76 @@
 # Attendance Checker
 
-A squadron/guild attendance tracker: members sign in with Discord, submit their
-IGN, attendance, pilot status and hours, and every submission posts to a
-Discord channel via webhook. Admins get a console to view, filter, delete and
-export submissions, change the webhook, and manage who else has admin access.
+A squadron/guild attendance tracker: members sign in with Discord, submit their IGN,
+attendance, pilot status and hours, and every submission posts to a Discord channel
+via webhook. Admins can view, filter, delete and export submissions, change the
+webhook, rotate the active op, and manage admin access.
 
-Built with Next.js 14 (App Router), Auth.js (Discord OAuth), Prisma +
-Postgres, and Tailwind. Light and dark mode included.
+Built with Next.js 14 (App Router), Auth.js (Discord OAuth), Prisma + Postgres,
+and Tailwind. Light and dark mode included.
 
----
+## Setup
 
-## 1. What you need before you start
+Install dependencies, configure the values in .env from .env.example, update the
+database schema, and run the app:
 
-- **Node.js 18+** installed on your machine
-- A **free Postgres database** — [Neon](https://neon.tech) or
-  [Supabase](https://supabase.com) both work well and take ~2 minutes to set up.
-  Copy the connection string they give you.
-- A **Discord application** for OAuth login (step 2 below)
-- A **Discord webhook URL** for notifications (step 3 below)
-- A **GitHub account**, to push this code (step 6 below)
+    npm install
+    npm run db:push
+    npm run dev
 
-## 2. Create the Discord OAuth app
+Required environment variables are DATABASE_URL, AUTH_SECRET, AUTH_DISCORD_ID,
+AUTH_DISCORD_SECRET, OWNER_DISCORD_ID, and DISCORD_WEBHOOK_URL.
 
-1. Go to <https://discord.com/developers/applications> → **New Application**.
-2. Open **OAuth2** in the sidebar. Copy the **Client ID** and **Client Secret**
-   — these become `AUTH_DISCORD_ID` and `AUTH_DISCORD_SECRET`.
-3. Under **Redirects**, add:
-   - `http://localhost:3000/api/auth/callback/discord` (for local dev)
-   - `https://your-domain.vercel.app/api/auth/callback/discord` (once deployed —
-     you can add this after step 7)
+For Discord OAuth, add the production callback URL:
 
-## 3. Create a Discord webhook (for notifications)
+    https://your-domain.example/api/auth/callback/discord
 
-In your Discord server: **Server Settings → Integrations → Webhooks → New
-Webhook**. Pick the channel you want submissions posted to, then **Copy
-Webhook URL**. This is your `DISCORD_WEBHOOK_URL` (you can also change it
-later from the admin panel without redeploying).
+## Submission locking
 
-## 4. Find your Discord user ID (so you're the first admin)
+Each submission is scoped by the current op ID stored in Admin → Settings.
+The database enforces a unique combination of opId + discordId, so one Discord
+account can submit only once for the same op.
 
-In Discord: **Settings → Advanced → Enable Developer Mode**. Then right-click
-your own name anywhere and choose **Copy User ID**. This is your
-`OWNER_DISCORD_ID` — that account always has admin access, no matter what's in
-the database, so you can never lock yourself out.
+The page checks the current op on the server before rendering the form. The POST
+handler also performs the check and catches the database unique-constraint race,
+returning HTTP 409 for duplicate submissions.
 
-## 5. Local setup
+After submitting, the form is replaced by a persistent locked state. The user can
+open the Contact mods / admins dialog, which shows:
 
-```bash
-# install dependencies
-npm install
+"You've already submitted for this op. If you need to change your response, please DM a mod or admin."
 
-# copy the env file and fill in the values from steps 1–4
-cp .env.example .env
+There is no second "Submit another entry" action.
 
-# push the schema to your database
-npx prisma db push
+## Starting a new op
 
-# run it
-npm run dev
-```
+Open Admin → Settings and change Current op ID, for example:
 
-Visit `http://localhost:3000`, sign in with Discord, and you should land on
-the attendance form. Sign in with the account matching `OWNER_DISCORD_ID` and
-an **Admin** link appears in the top bar.
+    FD-2026-S2
 
-## 6. Push to GitHub
+Changing the ID opens a new submission window while preserving previous submissions
+in the admin log.
 
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-```
+Admin deletion removes the submission record, which also releases that Discord
+account's lock for that op so a correction can be submitted.
 
-`.env` is already in `.gitignore`, so your secrets won't be committed — only
-`.env.example` (with placeholder values) goes to GitHub.
+## Database upgrade required for this version
 
-## 7. Deploy (Vercel is the easiest path)
+The Prisma schema now adds Submission.opId, a unique constraint on
+Submission(opId, discordId), and Settings.currentOpId.
 
-1. Go to [vercel.com](https://vercel.com) → **New Project** → import the
-   GitHub repo you just pushed.
-2. In **Environment Variables**, add everything from your `.env` file
-   (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET`,
-   `OWNER_DISCORD_ID`, `DISCORD_WEBHOOK_URL`), plus `NEXTAUTH_URL` set to your
-   production URL (e.g. `https://your-app.vercel.app`).
-3. Deploy. Once it's live, go back to the Discord Developer Portal and add
-   `https://your-app.vercel.app/api/auth/callback/discord` to the OAuth2
-   redirect list.
-4. Run `npx prisma db push` once against your production `DATABASE_URL` (or
-   just reuse the same database you used locally — that already has the
-   schema).
+Existing Submission rows receive the default op ID "current". Run:
 
-## How admin access works
+    npm run db:push
 
-- The account matching `OWNER_DISCORD_ID` is always an admin — a hardcoded
-  safety net.
-- From **Admin → Access**, the owner (or any admin) can add other Discord
-  users as admins by their Discord user ID. They get access the next time
-  they sign in — no redeploy needed.
+against every database environment before deploying/using the new form.
 
-## Customizing
+## Admin access
 
-- **Squadron/server name and webhook** — editable live from **Admin →
-  Settings**.
-- **Colors and fonts** — `src/app/globals.css` (CSS variables for light/dark)
-  and `tailwind.config.ts`.
-- **Form fields** — `src/components/attendance-form.tsx` on the frontend,
-  `src/app/api/attendance/route.ts` for validation, and `prisma/schema.prisma`
-  for storage. Run `npx prisma db push` again after changing the schema.
+The account matching OWNER_DISCORD_ID is always an admin. Other admins can be
+managed from Admin → Access.
+
+## UI
+
+Colors, surfaces, spacing, controls and card treatment live in src/app/globals.css.
+The existing font-family declarations in src/app/layout.tsx and
+tailwind.config.ts are intentionally unchanged.
