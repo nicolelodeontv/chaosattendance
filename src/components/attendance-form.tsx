@@ -1,21 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type Status = "idle" | "submitting" | "done" | "error";
+type Status = "idle" | "submitting" | "locked" | "error";
 
-export function AttendanceForm() {
+export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?: boolean }) {
   const [ign, setIgn] = useState("");
   const [attending, setAttending] = useState<"yes" | "no">("yes");
   const [hasPilot, setHasPilot] = useState<"yes" | "no">("yes");
   const [pilotName, setPilotName] = useState("");
   const [hours, setHours] = useState("");
   const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>(alreadySubmitted ? "locked" : "idle");
   const [error, setError] = useState("");
+  const locked = status === "locked";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (locked) return;
+
     setStatus("submitting");
     setError("");
 
@@ -33,47 +36,43 @@ export function AttendanceForm() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 409 || data.alreadySubmitted) {
+        setStatus("locked");
+        setError("");
+        return;
+      }
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Submission failed");
       }
-      setStatus("done");
+
+      setStatus("locked");
+      setError("");
     } catch (err: any) {
       setError(err.message || "Something went wrong");
       setStatus("error");
     }
   }
 
-  if (status === "done") {
-    return (
-      <div className="rounded border border-line bg-panel p-6 text-center">
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-cyan text-cyan">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        </div>
-        <p className="font-display text-base text-ink">Logged</p>
-        <p className="mt-1 text-sm text-ink2">Your attendance was recorded and posted to the server.</p>
-        <button
-          onClick={() => {
-            setIgn("");
-            setPilotName("");
-            setHours("");
-            setNotes("");
-            setStatus("idle");
-          }}
-          className="mt-4 text-sm text-cyan hover:underline"
-        >
-          Submit another entry
-        </button>
-      </div>
-    );
+  if (locked) {
+    return <SubmissionLocked />;
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded border border-line bg-panel p-6">
-      <div className="mb-5 space-y-1.5">
-        <label htmlFor="ign" className="text-sm text-ink2">
+    <form onSubmit={handleSubmit} className="premium-card p-6 sm:p-7">
+      <div className="mb-6">
+        <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-ink2">
+          Your response
+        </p>
+        <p className="text-sm leading-6 text-ink2">
+          Complete the fields below. Your Discord account will be locked to this op after submission.
+        </p>
+      </div>
+
+      <div className="mb-6 space-y-2">
+        <label htmlFor="ign" className="text-sm font-medium text-ink">
           IGN
         </label>
         <input
@@ -86,9 +85,9 @@ export function AttendanceForm() {
         />
       </div>
 
-      <fieldset className="mb-5">
-        <legend className="mb-2 text-sm text-ink2">Attendance</legend>
-        <div className="grid grid-cols-2 gap-2">
+      <fieldset className="mb-6">
+        <legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend>
+        <div className="grid grid-cols-2 gap-2.5">
           <ToggleOption
             label="Attending"
             selected={attending === "yes"}
@@ -104,9 +103,9 @@ export function AttendanceForm() {
         </div>
       </fieldset>
 
-      <fieldset className="mb-5">
-        <legend className="mb-2 text-sm text-ink2">Pilot</legend>
-        <div className="grid grid-cols-2 gap-2">
+      <fieldset className="mb-6">
+        <legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend>
+        <div className="grid grid-cols-2 gap-2.5">
           <ToggleOption
             label="Have Pilot"
             selected={hasPilot === "yes"}
@@ -116,15 +115,15 @@ export function AttendanceForm() {
           <ToggleOption
             label="No Pilot"
             selected={hasPilot === "no"}
-            color="amber"
+            color="red"
             onClick={() => setHasPilot("no")}
           />
         </div>
       </fieldset>
 
       {hasPilot === "yes" && (
-        <div className="mb-5 space-y-1.5">
-          <label htmlFor="pilotName" className="text-sm text-ink2">
+        <div className="mb-6 space-y-2">
+          <label htmlFor="pilotName" className="text-sm font-medium text-ink">
             Pilot Name
           </label>
           <input
@@ -138,8 +137,8 @@ export function AttendanceForm() {
         </div>
       )}
 
-      <div className="mb-5 space-y-1.5">
-        <label htmlFor="hours" className="text-sm text-ink2">
+      <div className="mb-6 space-y-2">
+        <label htmlFor="hours" className="text-sm font-medium text-ink">
           Hours
         </label>
         <input
@@ -154,9 +153,9 @@ export function AttendanceForm() {
         />
       </div>
 
-      <div className="mb-6 space-y-1.5">
-        <label htmlFor="notes" className="text-sm text-ink2">
-          Notes <span className="text-ink2/70">(optional)</span>
+      <div className="mb-7 space-y-2">
+        <label htmlFor="notes" className="text-sm font-medium text-ink">
+          Notes <span className="font-normal text-ink2">(optional)</span>
         </label>
         <textarea
           id="notes"
@@ -167,12 +166,16 @@ export function AttendanceForm() {
         />
       </div>
 
-      {error && <p className="mb-4 text-sm text-red">{error}</p>}
+      {error && (
+        <div className="mb-4 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red">
+          {error}
+        </div>
+      )}
 
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="w-full rounded border border-amber bg-amber/10 py-2.5 font-display text-sm text-amber transition-colors hover:bg-amber/20 disabled:opacity-50"
+        className="premium-button w-full disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === "submitting" ? "Submitting…" : "Submit attendance"}
       </button>
@@ -181,9 +184,8 @@ export function AttendanceForm() {
 }
 
 const SELECTED_STYLES = {
-  cyan: "border-cyan text-cyan bg-cyan/10",
-  red: "border-red text-red bg-red/10",
-  amber: "border-amber text-amber bg-amber/10",
+  cyan: "border-cyan bg-cyan/10 text-cyan",
+  red: "border-red bg-red/10 text-red",
 };
 
 function ToggleOption({
@@ -197,15 +199,103 @@ function ToggleOption({
   color: keyof typeof SELECTED_STYLES;
   onClick: () => void;
 }) {
+  const classes = ["premium-toggle", selected ? SELECTED_STYLES[color] : ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded border px-3 py-2 text-left text-sm transition-colors ${
-        selected ? SELECTED_STYLES[color] : "border-line text-ink2 hover:border-ink2"
-      }`}
-    >
+    <button type="button" onClick={onClick} className={classes}>
       {label}
     </button>
+  );
+}
+
+function SubmissionLocked() {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  return (
+    <>
+      <section className="premium-card p-6 sm:p-7" aria-labelledby="submission-locked-title">
+        <div className="mb-5 flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan/30 bg-cyan/10 text-cyan">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="4" y="10" width="16" height="11" rx="2" />
+              <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            </svg>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">
+              Submission locked
+            </p>
+            <h2 id="submission-locked-title" className="font-display text-xl text-ink">
+              Already submitted
+            </h2>
+            <p className="mt-1.5 text-sm leading-6 text-ink2">
+              You’ve already submitted for this op. Your response is locked to the current operation.
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-5 rounded-lg border border-cyan/20 bg-cyan/5 px-4 py-3.5 text-sm leading-6 text-ink2">
+          You've already submitted for this op. If you need to change your response, please DM a mod or admin.
+        </div>
+
+        <button type="button" onClick={() => setOpen(true)} className="premium-button-secondary">
+          Contact mods / admins
+        </button>
+      </section>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="contact-mods-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md premium-card p-6 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">
+                  Attendance help
+                </p>
+                <h3 id="contact-mods-title" className="font-display text-xl text-ink">
+                  Contact mods / admins
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="icon-button"
+                aria-label="Close contact mods dialog"
+              >
+                ×
+              </button>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-ink2">
+              You've already submitted for this op. If you need to change your response, please DM a mod or admin.
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="premium-button mt-6 w-full"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
