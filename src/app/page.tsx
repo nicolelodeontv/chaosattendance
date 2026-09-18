@@ -3,6 +3,8 @@ import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home({
   searchParams,
 }: {
