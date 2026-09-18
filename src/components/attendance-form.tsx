@@ -211,7 +211,7 @@ function ToggleOption({
 }
 
 function SubmissionLocked() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     if (!open) return;
