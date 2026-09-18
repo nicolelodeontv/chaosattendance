@@ -42,12 +42,17 @@ body {
   color: rgb(var(--ink));
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   background-image:
-    radial-gradient(circle at top left, rgb(var(--cyan) / 0.08), transparent 28rem),
-    radial-gradient(circle at 100% 10%, rgb(var(--cyan) / 0.05), transparent 24rem),
-    linear-gradient(rgb(var(--line) / 0.22) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--line) / 0.22) 1px, transparent 1px);
-  background-size: auto, auto, 32px 32px, 32px 32px;
-  background-position: center, center, -1px -1px, -1px -1px;
+    radial-gradient(
+      circle at 50% 22%,
+      rgb(var(--cyan) / 0.08),
+      transparent 24rem
+    ),
+    linear-gradient(
+      180deg,
+      rgb(var(--base)) 0%,
+      rgb(var(--base) / 0.92) 52%,
+      rgb(var(--base)) 100%
+    );
   background-attachment: fixed;
 }
 
