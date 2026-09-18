@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Status = "idle" | "submitting" | "locked" | "error";
 
@@ -11,6 +12,7 @@ export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?
   const [pilotName, setPilotName] = useState("");
   const [hours, setHours] = useState("");
   const [notes, setNotes] = useState("");
+  const router = useRouter();
   const [status, setStatus] = useState<Status>(alreadySubmitted ? "locked" : "idle");
   const [error, setError] = useState("");
   const locked = status === "locked";
@@ -41,6 +43,7 @@ export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?
       if (res.status === 409 || data.alreadySubmitted) {
         setStatus("locked");
         setError("");
+        router.refresh();
         return;
       }
 
@@ -50,6 +53,7 @@ export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?
 
       setStatus("locked");
       setError("");
+      router.refresh();
     } catch (err: any) {
       setError(err.message || "Something went wrong");
       setStatus("error");
