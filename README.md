@@ -77,6 +77,4 @@ tailwind.config.ts are intentionally unchanged.
 
 ## Attendance page freshness
 
-## Attendance page freshness
-
 The attendance page is rendered dynamically and uses zero dynamic client stale time so per-user submission status is refreshed when navigating between attendance and admin. The form also refreshes the current route after submission.
