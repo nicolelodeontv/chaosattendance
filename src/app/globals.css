@@ -43,17 +43,32 @@ body {
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   background-image:
     radial-gradient(
-      circle at 50% 22%,
-      rgb(var(--cyan) / 0.08),
+      circle at 50% 28%,
+      rgb(var(--cyan) / 0.07),
+      transparent 22rem
+    ),
+    linear-gradient(
+      180deg,
+      #eef2f5 0%,
+      #f8fafc 42%,
+      #ffffff 100%
+    );
+  background-attachment: fixed;
+}
+
+.dark body {
+  background-image:
+    radial-gradient(
+      circle at 50% 28%,
+      rgb(var(--cyan) / 0.09),
       transparent 24rem
     ),
     linear-gradient(
       180deg,
-      rgb(var(--base)) 0%,
-      rgb(var(--base) / 0.92) 52%,
-      rgb(var(--base)) 100%
+      #0d1420 0%,
+      #080c12 48%,
+      #05070a 100%
     );
-  background-attachment: fixed;
 }
 
 ::selection {
