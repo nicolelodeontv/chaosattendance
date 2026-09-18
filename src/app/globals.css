@@ -3,27 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --base: 245 243 238;   /* #F5F3EE day console */
+  --base: 244 247 250;
   --panel: 255 255 255;
-  --panel2: 240 237 230;
-  --line: 210 205 193;
-  --ink: 20 24 33;
-  --ink2: 90 95 105;
-  --amber: 176 108 12;
-  --cyan: 15 130 133;
-  --red: 176 45 45;
+  --panel2: 247 249 252;
+  --line: 211 219 228;
+  --ink: 18 26 39;
+  --ink2: 91 105 121;
+  --amber: 27 157 170;
+  --cyan: 27 157 170;
+  --red: 208 72 82;
 }
 
 .dark {
-  --base: 10 14 19;      /* #0A0E13 night ops */
-  --panel: 18 24 33;     /* #121821 */
-  --panel2: 24 31 41;
-  --line: 40 49 61;
-  --ink: 227 231 236;
-  --ink2: 140 150 163;
-  --amber: 242 169 59;
-  --cyan: 63 193 201;
-  --red: 224 87 91;
+  --base: 8 12 18;
+  --panel: 14 20 29;
+  --panel2: 19 27 38;
+  --line: 39 50 65;
+  --ink: 233 238 243;
+  --ink2: 143 156 173;
+  --amber: 71 202 214;
+  --cyan: 71 202 214;
+  --red: 228 87 99;
 }
 
 * {
@@ -42,14 +42,17 @@ body {
   color: rgb(var(--ink));
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   background-image:
-    linear-gradient(rgb(var(--line) / 0.35) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--line) / 0.35) 1px, transparent 1px);
-  background-size: 32px 32px;
-  background-position: -1px -1px;
+    radial-gradient(circle at top left, rgb(var(--cyan) / 0.08), transparent 28rem),
+    radial-gradient(circle at 100% 10%, rgb(var(--cyan) / 0.05), transparent 24rem),
+    linear-gradient(rgb(var(--line) / 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--line) / 0.22) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px;
+  background-position: center, center, -1px -1px, -1px -1px;
+  background-attachment: fixed;
 }
 
 ::selection {
-  background: rgb(var(--amber) / 0.35);
+  background: rgb(var(--cyan) / 0.28);
 }
 
 .status-dot {
@@ -59,6 +62,123 @@ body {
   border-radius: 999px;
 }
 
+@layer components {
+  .premium-card {
+    border: 1px solid rgb(var(--line) / 0.9);
+    border-radius: 14px;
+    background: linear-gradient(
+      145deg,
+      rgb(var(--panel) / 0.98),
+      rgb(var(--panel) / 0.9)
+    );
+    box-shadow:
+      0 20px 55px rgb(0 0 0 / 0.08),
+      inset 0 1px 0 rgb(255 255 255 / 0.05);
+    backdrop-filter: blur(16px);
+  }
+
+  .dark .premium-card {
+    box-shadow:
+      0 24px 70px rgb(0 0 0 / 0.28),
+      inset 0 1px 0 rgb(255 255 255 / 0.03);
+  }
+
+  .premium-button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(var(--cyan) / 0.7);
+    border-radius: 10px;
+    background: rgb(var(--cyan) / 0.12);
+    padding: 0.7rem 1rem;
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgb(var(--cyan));
+    transition:
+      transform 0.15s ease,
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .premium-button:hover {
+    background: rgb(var(--cyan) / 0.18);
+    border-color: rgb(var(--cyan));
+    box-shadow: 0 10px 28px rgb(var(--cyan) / 0.12);
+    transform: translateY(-1px);
+  }
+
+  .premium-button-secondary {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(var(--line));
+    border-radius: 10px;
+    background: rgb(var(--panel2) / 0.9);
+    padding: 0.65rem 0.95rem;
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(var(--ink));
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .premium-button-secondary:hover {
+    border-color: rgb(var(--cyan) / 0.6);
+    background: rgb(var(--cyan) / 0.08);
+    color: rgb(var(--cyan));
+  }
+
+  .premium-toggle {
+    min-height: 46px;
+    width: 100%;
+    border: 1px solid rgb(var(--line));
+    border-radius: 10px;
+    background: rgb(var(--panel2) / 0.85);
+    padding: 0.7rem 0.85rem;
+    text-align: left;
+    font-size: 0.9rem;
+    color: rgb(var(--ink2));
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .premium-toggle:hover {
+    border-color: rgb(var(--cyan) / 0.45);
+    color: rgb(var(--ink));
+    transform: translateY(-1px);
+  }
+
+  .icon-button {
+    display: inline-flex;
+    height: 34px;
+    width: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(var(--line));
+    border-radius: 9px;
+    background: rgb(var(--panel2));
+    font-size: 1.25rem;
+    line-height: 1;
+    color: rgb(var(--ink2));
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .icon-button:hover {
+    border-color: rgb(var(--cyan) / 0.5);
+    color: rgb(var(--cyan));
+  }
+}
+
 input[type="text"],
 input[type="number"],
 textarea,
@@ -66,22 +186,28 @@ select {
   background-color: rgb(var(--panel2));
   border: 1px solid rgb(var(--line));
   color: rgb(var(--ink));
-  border-radius: 4px;
-  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
   width: 100%;
   font-size: 0.9rem;
+  line-height: 1.4;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
 }
 
 input[type="text"]:focus,
 input[type="number"]:focus,
 textarea:focus,
 select:focus {
-  border-color: rgb(var(--cyan));
+  border-color: rgb(var(--cyan) / 0.8);
+  box-shadow: 0 0 0 3px rgb(var(--cyan) / 0.11);
+  background-color: rgb(var(--panel));
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: rgb(var(--ink2));
+  color: rgb(var(--ink2) / 0.8);
 }
