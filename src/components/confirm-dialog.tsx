@@ -11,6 +11,8 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   variant?: "danger" | "default";
   loading?: boolean;
+  confirmDisabled?: boolean;
+  children?: ReactNode;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 };
@@ -23,6 +25,8 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   variant = "danger",
   loading = false,
+  confirmDisabled = false,
+  children,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -54,7 +58,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
             className={[
               "inline-flex min-h-[42px] items-center justify-center rounded-[10px] border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
               variant === "danger"
