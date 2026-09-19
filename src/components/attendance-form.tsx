@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type FieldName = "ign" | "pilotName" | "hours";
@@ -107,7 +108,7 @@ export function AttendanceForm({
     return () => window.clearTimeout(timer);
   }, [success]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (locked) return;
 
@@ -178,8 +179,8 @@ export function AttendanceForm({
         setSuccess(`Attendance updated for ${ign.trim()}`);
       }
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
       setStatus("error");
     }
   }
