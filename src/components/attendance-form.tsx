@@ -420,7 +420,6 @@ export function AttendanceForm({
         submission={submission}
         canEdit={canEdit}
         onEdit={editExistingSubmission}
-        onNewSubmission={resetForNewSubmission}
       />
     );
   }
@@ -601,7 +600,6 @@ export function AttendanceForm({
             aria-describedby={fieldErrors.hours ? "hours-error" : undefined}
             className={fieldErrors.hours ? "border-red focus:border-red" : ""}
             placeholder="0"
-            inputMode="numeric"
           />
           {fieldErrors.hours && (
             <p id="hours-error" className="text-xs text-red" role="alert">
@@ -695,12 +693,10 @@ function ReadOnlySubmissionCard({
   submission,
   canEdit,
   onEdit,
-  onNewSubmission,
 }: {
   submission: Submission;
   canEdit: boolean;
   onEdit: () => void;
-  onNewSubmission: () => void;
 }) {
   return (
     <div className="premium-card p-5 sm:p-7" aria-live="polite">
