@@ -3,6 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type FieldName = "ign" | "pilotName" | "hours";
+type FieldErrors = Partial<Record<FieldName, string>>;
+type TouchedFields = Record<FieldName, boolean>;
+
+function validateField(field: FieldName, value: string, hasPilot: "yes" | "no") {
+  if (field === "ign") return value.trim() ? "" : "Enter your in-game name.";
+
+  if (field === "pilotName") {
+    if (hasPilot !== "yes") return "";
+    return value.trim() ? "" : "Enter your pilot's name.";
+  }
+
+  if (!value.trim()) return "Enter your hours.";
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= 0
+    ? ""
+    : "Hours must be a number, 0 or higher.";
+}
+
 type Status = "idle" | "submitting" | "locked" | "error";
 
 export function AttendanceForm({
@@ -22,7 +41,65 @@ export function AttendanceForm({
   const [status, setStatus] = useState<Status>(alreadySubmitted && !isAdmin ? "locked" : "idle");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [touched, setTouched] = useState<TouchedFields>({ ign: false, pilotName: false, hours: false });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const locked = status === "locked" && !isAdmin;
+
+  function updateField(field: FieldName, value: string) {
+    const error = validateField(field, value, hasPilot);
+    setFieldErrors((current) => {
+      if (!touched[field] && !current[field]) return current;
+      const next = { ...current };
+      if (error) next[field] = error;
+      else delete next[field];
+      return next;
+    });
+  }
+
+  function touchField(field: FieldName, value: string) {
+    setTouched((current) => ({ ...current, [field]: true }));
+    const error = validateField(field, value, hasPilot);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      if (error) next[field] = error;
+      else delete next[field];
+      return next;
+    });
+  }
+
+  function handlePilotChange(value: "yes" | "no") {
+    setHasPilot(value);
+    if (value === "no") {
+      setFieldErrors((current) => {
+        const next = { ...current };
+        delete next.pilotName;
+        return next;
+      });
+      return;
+    }
+
+    if (touched.pilotName) {
+      const error = validateField("pilotName", pilotName, value);
+      setFieldErrors((current) => {
+        const next = { ...current };
+        if (error) next.pilotName = error;
+        else delete next.pilotName;
+        return next;
+      });
+    }
+  }
+
+  function focusFirstInvalid(errors: FieldErrors) {
+    const firstInvalid = (["ign", "pilotName", "hours"] as FieldName[]).find((field) => errors[field]);
+    if (!firstInvalid) return;
+
+    window.setTimeout(() => {
+      const element = document.getElementById(firstInvalid);
+      if (!element) return;
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      (element as HTMLInputElement).focus();
+    }, 0);
+  }
 
   useEffect(() => {
     if (!success) return;
@@ -34,9 +111,34 @@ export function AttendanceForm({
     e.preventDefault();
     if (locked) return;
 
-    setStatus("submitting");
+    const nextTouched: TouchedFields = {
+      ign: true,
+      pilotName: hasPilot === "yes",
+      hours: true,
+    };
+    const nextErrors: FieldErrors = {
+      ign: validateField("ign", ign, hasPilot),
+      pilotName: validateField("pilotName", pilotName, hasPilot),
+      hours: validateField("hours", hours, hasPilot),
+    };
+
+    Object.keys(nextErrors).forEach((key) => {
+      const field = key as FieldName;
+      if (!nextErrors[field]) delete nextErrors[field];
+    });
+
+    setTouched(nextTouched);
+    setFieldErrors(nextErrors);
     setError("");
     setSuccess("");
+
+    if (Object.keys(nextErrors).length > 0) {
+      setStatus("idle");
+      focusFirstInvalid(nextErrors);
+      return;
+    }
+
+    setStatus("submitting");
 
     try {
       const res = await fetch("/api/attendance", {
@@ -87,7 +189,7 @@ export function AttendanceForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="premium-card mx-auto w-full p-6 sm:p-7">
+    <form onSubmit={handleSubmit} noValidate className="premium-card mx-auto w-full p-6 sm:p-7">
       <div className="mb-6">
         <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-ink2">
           Your response
@@ -116,9 +218,22 @@ export function AttendanceForm({
           type="text"
           required
           value={ign}
-          onChange={(e) => setIgn(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setIgn(value);
+            updateField("ign", value);
+          }}
+          onBlur={(e) => touchField("ign", e.target.value)}
+          aria-invalid={Boolean(fieldErrors.ign)}
+          aria-describedby={fieldErrors.ign ? "ign-error" : undefined}
+          className={fieldErrors.ign ? "border-red focus:border-red" : ""}
           placeholder="In-game name"
         />
+        {fieldErrors.ign && (
+          <p id="ign-error" className="text-xs text-red" role="alert">
+            {fieldErrors.ign}
+          </p>
+        )}
       </div>
 
       <fieldset className="mb-6">
@@ -146,13 +261,13 @@ export function AttendanceForm({
             label="Have Pilot"
             selected={hasPilot === "yes"}
             color="cyan"
-            onClick={() => setHasPilot("yes")}
+            onClick={() => handlePilotChange("yes")}
           />
           <ToggleOption
             label="No Pilot"
             selected={hasPilot === "no"}
             color="red"
-            onClick={() => setHasPilot("no")}
+            onClick={() => handlePilotChange("no")}
           />
         </div>
       </fieldset>
@@ -167,9 +282,22 @@ export function AttendanceForm({
             type="text"
             required
             value={pilotName}
-            onChange={(e) => setPilotName(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setPilotName(value);
+              updateField("pilotName", value);
+            }}
+            onBlur={(e) => touchField("pilotName", e.target.value)}
+            aria-invalid={Boolean(fieldErrors.pilotName)}
+            aria-describedby={fieldErrors.pilotName ? "pilotName-error" : undefined}
+            className={fieldErrors.pilotName ? "border-red focus:border-red" : ""}
             placeholder="Pilot's name"
           />
+          {fieldErrors.pilotName && (
+            <p id="pilotName-error" className="text-xs text-red" role="alert">
+              {fieldErrors.pilotName}
+            </p>
+          )}
         </div>
       )}
 
@@ -184,9 +312,23 @@ export function AttendanceForm({
           min="0"
           required
           value={hours}
-          onChange={(e) => setHours(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setHours(value);
+            updateField("hours", value);
+          }}
+          onBlur={(e) => touchField("hours", e.target.value)}
+          onWheel={(e) => e.currentTarget.blur()}
+          aria-invalid={Boolean(fieldErrors.hours)}
+          aria-describedby={fieldErrors.hours ? "hours-error" : undefined}
+          className={fieldErrors.hours ? "border-red focus:border-red" : ""}
           placeholder="0"
         />
+        {fieldErrors.hours && (
+          <p id="hours-error" className="text-xs text-red" role="alert">
+            {fieldErrors.hours}
+          </p>
+        )}
       </div>
 
       <div className="mb-7 space-y-2">
