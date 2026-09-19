@@ -21,6 +21,7 @@ export default async function Home({
   const admin = await isAdmin(discordId);
   const alreadySubmitted = Boolean(
     discordId &&
+      !admin &&
       (await prisma.submission.findFirst({
         where: { opId: currentOpId, discordId },
         select: { id: true },
