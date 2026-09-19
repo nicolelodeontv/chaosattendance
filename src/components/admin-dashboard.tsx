@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SuccessDialog } from "@/components/success-dialog";
@@ -26,14 +26,100 @@ type Submission = {
 type Admin = { discordId: string; username: string; createdAt: string; role: UserRole };
 
 type Tab = "submissions" | "settings" | "access";
+type NotificationItem = {
+  id: string;
+  ign: string;
+  attendance: string;
+  hasPilot: boolean;
+  pilotName: string | null;
+  hours: number;
+  timestamp: string;
+  eventType: "created" | "updated";
+};
+
+type NotificationTarget = { id: string; ign: string };
+
+const NOTIFICATION_STORAGE_KEY = "chaosattendance:admin-notifications:v1";
+
+function readNotificationState(): { lastSeen: number; knownIds: string[] } {
+  try {
+    const raw = window.localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+    if (!raw) return { lastSeen: 0, knownIds: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      lastSeen: typeof parsed?.lastSeen === "number" ? parsed.lastSeen : 0,
+      knownIds: Array.isArray(parsed?.knownIds)
+        ? parsed.knownIds.filter((id: unknown): id is string => typeof id === "string").slice(-20)
+        : [],
+    };
+  } catch {
+    return { lastSeen: 0, knownIds: [] };
+  }
+}
+
+function writeNotificationState(state: { lastSeen: number; knownIds: string[] }) {
+  try {
+    window.localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function relativeTime(value: string) {
+  const diffSeconds = Math.round((new Date(value).getTime() - Date.now()) / 1000);
+  const abs = Math.abs(diffSeconds);
+  const units: Array<[number, Intl.RelativeTimeFormatUnit]> = [
+    [31536000, "year"],
+    [2592000, "month"],
+    [604800, "week"],
+    [86400, "day"],
+    [3600, "hour"],
+    [60, "minute"],
+    [1, "second"],
+  ];
+  const unit = units.find(([seconds]) => abs >= seconds) ?? units[units.length - 1];
+  return new Intl.RelativeTimeFormat("en", { numeric: "always" }).format(
+    Math.round(diffSeconds / unit[0]),
+    unit[1]
+  );
+}
+
 
 export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   const [tab, setTab] = useState<Tab>("submissions");
+  const [notificationTarget, setNotificationTarget] = useState<NotificationTarget | null>(null);
+  const [notificationToasts, setNotificationToasts] = useState<ToastItem[]>([]);
   const visibleTab: Tab = isOwner ? tab : "submissions";
   const tabs: Tab[] = isOwner ? ["submissions", "settings", "access"] : ["submissions"];
 
+  function openNotification(item: NotificationItem) {
+    setTab("submissions");
+    setNotificationTarget({ id: item.id, ign: item.ign });
+  }
+
+  function addNotificationToast(message: string) {
+    setNotificationToasts((current) => [
+      ...current,
+      { id: window.crypto.randomUUID(), message },
+    ]);
+  }
+
   return (
     <div>
+      <ToastContainer
+        toasts={notificationToasts}
+        onDismiss={(id) =>
+          setNotificationToasts((current) => current.filter((toast) => toast.id !== id))
+        }
+      />
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="font-display text-sm text-ink">Admin workspace</p>
+        <AdminNotificationBell
+          onOpenNotification={openNotification}
+          onNewSubmission={addNotificationToast}
+        />
+      </div>
+
       <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-line bg-panel/70 p-1">
         {tabs.map((t) => (
           <button
@@ -49,14 +135,252 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         ))}
       </div>
 
-      {visibleTab === "submissions" && <SubmissionsTab isOwner={isOwner} />}
+      {visibleTab === "submissions" && (
+        <SubmissionsTab
+          isOwner={isOwner}
+          notificationTarget={notificationTarget}
+          onNotificationTargetConsumed={() => setNotificationTarget(null)}
+        />
+      )}
       {visibleTab === "settings" && isOwner && <SettingsTab />}
       {visibleTab === "access" && isOwner && <AccessTab />}
     </div>
   );
 }
 
-function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
+function AdminNotificationBell({
+  onOpenNotification,
+  onNewSubmission,
+}: {
+  onOpenNotification: (notification: NotificationItem) => void;
+  onNewSubmission: (message: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [lastSeen, setLastSeen] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
+  const alertedIdsRef = useRef<Set<string>>(new Set());
+
+  const unreadCount = notifications.filter(
+    (notification) => new Date(notification.timestamp).getTime() > lastSeen
+  ).length;
+
+  async function poll() {
+    const state = readNotificationState();
+    setLastSeen(state.lastSeen);
+
+    try {
+      const params = new URLSearchParams({ since: String(state.lastSeen) });
+      if (state.knownIds.length) {
+        params.set("knownIds", state.knownIds.join(","));
+      }
+
+      const res = await fetch("/api/admin/notifications?" + params.toString(), {
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to load notifications.");
+      }
+
+      const items = (data.notifications ?? []) as NotificationItem[];
+      const latest = Number(data.latestTimestamp) || state.lastSeen;
+      setNotifications(items);
+
+      if (!initializedRef.current) {
+        writeNotificationState({
+          lastSeen: Math.max(state.lastSeen, latest),
+          knownIds: items.map((item) => item.id),
+        });
+        setLastSeen(Math.max(state.lastSeen, latest));
+        initializedRef.current = true;
+        return;
+      }
+
+      for (const item of items) {
+        const timestamp = new Date(item.timestamp).getTime();
+        if (
+          item.eventType === "created" &&
+          timestamp > state.lastSeen &&
+          !alertedIdsRef.current.has(item.id)
+        ) {
+          alertedIdsRef.current.add(item.id);
+          onNewSubmission("New submission from " + item.ign);
+        }
+      }
+    } catch {
+      // A failed poll should not interrupt the admin console.
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void poll();
+
+    function handleVisibility() {
+      if (!document.hidden) void poll();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void poll();
+    }, 30000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (open && rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  function markAllRead() {
+    const latest = notifications.reduce(
+      (max, notification) => Math.max(max, new Date(notification.timestamp).getTime()),
+      lastSeen
+    );
+    writeNotificationState({
+      lastSeen: latest,
+      knownIds: notifications.map((notification) => notification.id),
+    });
+    setLastSeen(latest);
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="icon-button relative h-10 w-10"
+        aria-label={
+          unreadCount > 0
+            ? String(unreadCount > 9 ? "9+" : unreadCount) + " unread notifications"
+            : "Notifications"
+        }
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M10 21h4" />
+        </svg>
+        {unreadCount > 0 ? (
+          <span className="absolute -right-1 -top-1 min-w-5 rounded-full border border-panel bg-red px-1 text-[10px] font-semibold leading-5 text-white">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          aria-label="Admin notifications"
+          className="absolute right-0 top-full z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-panel shadow-2xl"
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <div>
+              <p className="font-display text-sm text-ink">Notifications</p>
+              <p className="mt-0.5 text-xs text-ink2">
+                {loading ? "Checking…" : String(notifications.length) + " latest events"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={markAllRead}
+              className="min-h-9 rounded-md px-2 text-xs font-medium text-cyan transition-colors hover:bg-cyan/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50"
+            >
+              Mark all as read
+            </button>
+          </div>
+
+          <div className="max-h-[26rem] overflow-y-auto">
+            {notifications.map((item) => {
+              const isUnread = new Date(item.timestamp).getTime() > lastSeen;
+              const detail =
+                item.eventType === "created"
+                  ? "submitted attendance (" +
+                    item.attendance +
+                    ", " +
+                    (item.hasPilot ? "Pilot: " + (item.pilotName || "Unknown") : "No Pilot") +
+                    ", " +
+                    item.hours +
+                    " hrs)"
+                  : "updated their response";
+
+              return (
+                <button
+                  key={item.id + item.timestamp}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    onOpenNotification(item);
+                  }}
+                  className={[
+                    "block w-full border-b border-line px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-panel2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/50",
+                    isUnread ? "bg-cyan/5" : "",
+                  ].join(" ")}
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={[
+                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                        isUnread ? "bg-cyan" : "bg-ink2/30",
+                      ].join(" ")}
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm leading-5 text-ink">
+                        <span className="font-medium">{item.ign}</span> {detail}
+                      </p>
+                      <p className="mt-1 text-xs text-ink2">{relativeTime(item.timestamp)}</p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            {!loading && notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-ink2">
+                No submission events yet.
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SubmissionsTab({
+  isOwner,
+  notificationTarget,
+  onNotificationTargetConsumed,
+}: {
+  isOwner: boolean;
+  notificationTarget: NotificationTarget | null;
+  onNotificationTargetConsumed: () => void;
+}) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
@@ -71,6 +395,23 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState("");
   const [bulkConfirmText, setBulkConfirmText] = useState("");
+  const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!notificationTarget) return;
+    setFilter(notificationTarget.ign);
+    setHighlightedRowId(notificationTarget.id);
+    onNotificationTargetConsumed();
+
+    const element = document.getElementById("submission-row-" + notificationTarget.id);
+    if (element) {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      element.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    }
+
+    const timer = window.setTimeout(() => setHighlightedRowId(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [notificationTarget, onNotificationTargetConsumed]);
 
   async function load() {
     setLoading(true);
@@ -284,7 +625,14 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
             </tr>
           )}
           {filtered.map((r) => (
-            <tr key={r.id} className="border-b border-line last:border-0">
+            <tr
+              id={"submission-row-" + r.id}
+              key={r.id}
+              className={[
+                "border-b border-line last:border-0 transition-colors duration-200",
+                highlightedRowId === r.id ? "bg-cyan/10" : "",
+              ].join(" ")}
+            >
               <td className="px-2.5 py-3 font-display text-xs text-cyan sm:px-3 whitespace-nowrap">{r.opId}</td>
               <td className="px-2.5 py-3 text-ink sm:px-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -588,6 +936,7 @@ function Badge({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
 
 function SettingsTab() {
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [guildName, setGuildName] = useState("");
   const [currentOpId, setCurrentOpId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -599,6 +948,7 @@ function SettingsTab() {
       .then((r) => r.json())
       .then((d) => {
         setWebhookUrl(d.settings?.webhookUrl ?? "");
+        setNotificationsEnabled(d.settings?.notificationsEnabled !== false);
         setGuildName(d.settings?.guildName ?? "Squadron");
         setCurrentOpId(d.settings?.currentOpId ?? "current");
         setLoading(false);
@@ -621,7 +971,7 @@ function SettingsTab() {
     const res = await fetch("/api/admin/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ webhookUrl, guildName, currentOpId }),
+      body: JSON.stringify({ webhookUrl, notifyDiscord: notificationsEnabled, guildName, currentOpId }),
     });
     setSaving(false);
     if (res.ok) showToast("Settings saved");
@@ -662,18 +1012,45 @@ function SettingsTab() {
             />
           </div>
 
-          <div className="mt-5 space-y-2">
-            <label className="text-sm font-medium text-ink">Discord webhook URL</label>
-            <input
-              type="text"
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://discord.com/api/webhooks/…"
-            />
-            <p className="text-xs leading-5 text-ink2">
-              Every new submission posts here. Leave blank to fall back to the
-              DISCORD_WEBHOOK_URL environment variable.
-            </p>
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-ink">Discord notifications</p>
+                <p className="mt-1 text-xs leading-5 text-ink2">
+                  Post successful attendance submissions and updates to Discord.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notificationsEnabled}
+                onClick={() => setNotificationsEnabled((value) => !value)}
+                className={[
+                  "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/60 motion-reduce:transition-none",
+                  notificationsEnabled ? "border-cyan bg-cyan/20" : "border-line bg-panel2",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "h-5 w-5 rounded-full bg-current transition-transform duration-150 motion-reduce:transition-none",
+                    notificationsEnabled ? "translate-x-6 text-cyan" : "translate-x-1 text-ink2",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-ink">Discord webhook URL</label>
+              <input
+                type="text"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                placeholder="https://discord.com/api/webhooks/…"
+                disabled={!notificationsEnabled}
+              />
+              <p className="text-xs leading-5 text-ink2">
+                Leave the URL blank to use DISCORD_WEBHOOK_URL. Turning notifications off overrides both sources until re-enabled.
+              </p>
+            </div>
           </div>
 
           <button
