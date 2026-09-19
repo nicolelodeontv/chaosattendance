@@ -54,6 +54,14 @@ function SubmissionsTab() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
+  const [editingRow, setEditingRow] = useState(false);
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 2500);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   async function load() {
     setLoading(true);
@@ -203,8 +211,12 @@ function SubmissionsTab() {
                 {new Date(r.createdAt).toLocaleDateString()}
               </td>
               <td className="px-2.5 py-3 text-right sm:px-3">
-                <button
-                  onClick={() => remove(r.id)}
+                <div className="flex justify-end gap-1">
+                  <button type="button" onClick={() => { setSelected(r); setEditingRow(true); }} className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-cyan/5 hover:text-cyan" aria-label="Edit submission">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m16 3 5 5L8 21H3v-5Z" /><path d="m14 5 5 5" /></svg>
+                  </button>
+                  <button
+                    onClick={() => remove(r.id)}
                   className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
                   aria-label="Delete submission"
                 >
@@ -212,35 +224,120 @@ function SubmissionsTab() {
                     <path d="M3 6h18M8 6V4a1 1 0 0 1 1 1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
                   </svg>
                 </button>
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {selected ? <SubmissionDetailModal selected={selected} onClose={() => setSelected(null)} /> : null}
+      {toast && (
+        <div className="fixed right-4 top-4 z-[60] rounded-md border border-cyan/30 bg-panel px-4 py-3 text-sm text-cyan shadow-xl" role="status" aria-live="polite">{toast}</div>
+      )}
+      {selected ? (
+        <SubmissionDetailModal
+          selected={selected}
+          editing={editingRow}
+          onClose={() => { setSelected(null); setEditingRow(false); }}
+          onEdit={() => setEditingRow(true)}
+          onSaved={(updated) => {
+            setRows((current) => current.map((row) => row.id === updated.id ? updated : row));
+            setSelected(updated);
+            setEditingRow(false);
+            setToast(`Attendance updated for ${updated.ign}`);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
 function SubmissionDetailModal({
   selected,
+  editing,
   onClose,
+  onEdit,
+  onSaved,
 }: {
   selected: Submission;
+  editing: boolean;
   onClose: () => void;
+  onEdit: () => void;
+  onSaved: (submission: Submission) => void;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [ign, setIgn] = useState(selected.ign);
+  const [attending, setAttending] = useState(selected.attending);
+  const [hasPilot, setHasPilot] = useState(selected.hasPilot);
+  const [pilotName, setPilotName] = useState(selected.pilotName ?? "");
+  const [hours, setHours] = useState(String(selected.hours));
+  const [notes, setNotes] = useState(selected.notes ?? "");
+
+  useEffect(() => {
+    setError("");
+    setIgn(selected.ign);
+    setAttending(selected.attending);
+    setHasPilot(selected.hasPilot);
+    setPilotName(selected.pilotName ?? "");
+    setHours(String(selected.hours));
+    setNotes(selected.notes ?? "");
+  }, [selected]);
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/submissions/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ign, attending, hasPilot, pilotName, hours: Number(hours), notes }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Unable to update submission.");
+      onSaved(data.submission);
+    } catch (err: any) {
+      setError(err.message || "Unable to update submission.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="submission-detail-title"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submission-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
-        <SubmissionDetailHeader selected={selected} onClose={onClose} />
+        {editing ? (
+          <>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Edit submission</p>
+                <h3 id="submission-detail-title" className="font-display text-xl text-ink">{selected.ign}</h3>
+              </div>
+              <button type="button" onClick={onClose} className="icon-button" aria-label="Close submission detail dialog">×</button>
+            </div>
+            <div className="mt-6 space-y-5">
+              <div className="space-y-2"><label className="text-sm font-medium text-ink">IGN</label><input type="text" required value={ign} onChange={(e) => setIgn(e.target.value)} /></div>
+              <fieldset><legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend><div className="grid grid-cols-2 gap-2.5">
+                <button type="button" onClick={() => setAttending(true)} className={[`premium-toggle`, attending ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Attending</button>
+                <button type="button" onClick={() => setAttending(false)} className={[`premium-toggle`, !attending ? `border-red bg-red/10 text-red` : ` `].join(" ")}>Not Attending</button>
+              </div></fieldset>
+              <fieldset><legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend><div className="grid grid-cols-2 gap-2.5">
+                <button type="button" onClick={() => setHasPilot(true)} className={[`premium-toggle`, hasPilot ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Have Pilot</button>
+                <button type="button" onClick={() => setHasPilot(false)} className={[`premium-toggle`, !hasPilot ? `border-red bg-red/10 text-red` : ` `].join(" ")}>No Pilot</button>
+              </div></fieldset>
+              {hasPilot && <div className="space-y-2"><label className="text-sm font-medium text-ink">Pilot Name</label><input type="text" required value={pilotName} onChange={(e) => setPilotName(e.target.value)} /></div>}
+              <div className="space-y-2"><label className="text-sm font-medium text-ink">Hours</label><input type="number" step="0.5" min="0" required value={hours} onChange={(e) => setHours(e.target.value)} /></div>
+              <div className="space-y-2"><label className="text-sm font-medium text-ink">Notes <span className="font-normal text-ink2">(optional)</span></label><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+              {error && <div className="rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">{error}</div>}
+              <div className="flex gap-2"><button type="button" onClick={onClose} className="premium-button-secondary flex-1">Cancel</button><button type="button" onClick={save} disabled={saving} className="premium-button flex-1 disabled:cursor-not-allowed disabled:opacity-50">{saving ? "Saving…" : "Save"}</button></div>
+            </div>
+          </>
+        ) : (
+          <>
+            <SubmissionDetailHeader selected={selected} onClose={onClose} />
+            <button type="button" onClick={onEdit} className="premium-button mt-5 w-full">Edit submission</button>
+          </>
+        )}
       </div>
     </div>,
     document.body
