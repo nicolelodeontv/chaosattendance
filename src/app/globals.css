@@ -84,21 +84,20 @@ body {
 
 .toast-container {
   position: fixed;
-  right: 0;
   bottom: 24px;
-  left: 0;
+  left: 50%;
   z-index: 1000;
   display: flex;
-  width: 100%;
+  width: min(560px, calc(100vw - 32px));
+  transform: translateX(-50%);
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
   pointer-events: none;
 }
 
 .toast-item {
-  max-width: calc(100vw - 32px);
+  max-width: 100%;
   pointer-events: none;
   animation: toast-slide-up 3s ease both;
 }
