@@ -299,6 +299,7 @@ input[type="text"],
 input[type="number"],
 textarea,
 select {
+  min-height: 44px;
   background-color: rgb(var(--panel2));
   border: 1px solid rgb(var(--line));
   color: rgb(var(--ink));
@@ -317,10 +318,34 @@ select {
 input[type="text"]:focus,
 input[type="number"]:focus,
 textarea:focus,
+select:focus,
+.premium-toggle:focus-visible,
+.premium-button:focus-visible,
+.premium-button-secondary:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(var(--cyan) / 0.16);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus,
 select:focus {
   border-color: rgb(var(--cyan) / 0.8);
-  box-shadow: 0 0 0 3px rgb(var(--cyan) / 0.11);
   background-color: rgb(var(--panel));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  input[type="text"],
+  input[type="number"],
+  textarea,
+  select,
+  .premium-button,
+  .premium-button-secondary,
+  .premium-toggle {
+    transition: none;
+  }
 }
 
 input::placeholder,
