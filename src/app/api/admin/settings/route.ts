@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/admin";
+import { isOwner } from "@/lib/admin";
 
 export async function GET() {
   const session = await auth();
-  const user = session?.user as any;
-  if (!(await isAdmin(user?.discordId))) {
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  const user = session.user as any;
+  if (!isOwner(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -21,8 +24,11 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   const session = await auth();
-  const user = session?.user as any;
-  if (!(await isAdmin(user?.discordId))) {
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  const user = session.user as any;
+  if (!isOwner(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
