@@ -183,7 +183,7 @@ function SubmissionsTab() {
           {filtered.map((r) => (
             <tr key={r.id} className="border-b border-line last:border-0">
               <td className="px-2.5 py-3 font-display text-xs text-cyan sm:px-3 whitespace-nowrap">{r.opId}</td>
-              <td className="px-2.5 py-3 text-ink sm:px-3 whitespace-nowrap break-words">
+              <td className="px-2.5 py-3 text-ink sm:px-3 whitespace-nowrap">
                 <div className="min-w-0">
                   <button type="button" onClick={() => setSelected(r)} className="rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
@@ -195,18 +195,18 @@ function SubmissionsTab() {
                   )}
                 </div>
               </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">{r.discordUsername}</td>
-              <td className="px-2.5 py-3 sm:px-3 whitespace-normal">
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">{r.discordUsername}</td>
+              <td className="px-2.5 py-3 sm:px-3 whitespace-nowrap">
                 <Badge ok={r.attending} yes="Attending" no="Not Attending" />
               </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">
                 {r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}
               </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">{r.hours}</td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">{r.hours}</td>
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">
                 {r.notes ?? "—"}
               </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">
                 {new Date(r.createdAt).toLocaleDateString()}
               </td>
               <td className="px-2.5 py-3 text-right sm:px-3">
