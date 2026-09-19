@@ -364,7 +364,7 @@ function SubmissionDetailModal({
         title="Submission updated"
         message={
           <>
-            <strong className="font-medium text-ink">{pendingSaved?.ign ?? selected.ign}</strong>'s response has been saved.
+            <strong className="font-semibold text-ink">{pendingSaved?.ign ?? selected.ign}</strong>'s response has been saved.
           </>
         }
         onClose={closeSuccess}
