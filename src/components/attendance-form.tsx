@@ -184,7 +184,7 @@ export function AttendanceForm({
         title={alreadySubmitted ? "Attendance updated" : "Attendance submitted"}
         message={
           <>
-            Your response for <strong className="font-medium text-ink">{ign.trim()}</strong> has been recorded.
+            Your response for <strong className="font-semibold text-ink">{ign.trim()}</strong> has been recorded.
           </>
         }
         onClose={() => setSuccessOpen(false)}
