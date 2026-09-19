@@ -54,44 +54,6 @@ function SubmissionsTab() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [avatarLoading, setAvatarLoading] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    const res = await fetch("/api/attendance");
-    const data = await res.json();
-    setRows(data.submissions ?? []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  useEffect(() => {
-    if (!selected) {
-      setAvatarUrl(null);
-      setAvatarLoading(false);
-      return;
-    }
-    let active = true;
-    setAvatarLoading(true);
-    setAvatarUrl(null);
-    fetch(`/api/admin/discord-avatar?discordId=${encodeURIComponent(selected.discordId)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (active) setAvatarUrl(data.avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png");
-      })
-      .catch(() => {
-        if (active) setAvatarUrl("https://cdn.discordapp.com/embed/avatars/0.png");
-      })
-      .finally(() => {
-        if (active) setAvatarLoading(false);
-      });
-    return () => { active = false; };
-  }, [selected]);
-
   async function remove(id: string) {
     if (!confirm(`Delete this submission? ${rows.find((row) => row.id === id)?.ign ?? "This member"} will be able to submit again.`)) return;
     await fetch("/api/attendance/" + id, { method: "DELETE" });
