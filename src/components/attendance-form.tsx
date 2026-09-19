@@ -87,15 +87,13 @@ export function AttendanceForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="premium-card p-6 sm:p-7">
+    <form onSubmit={handleSubmit} className="premium-card mx-auto w-full p-6 sm:p-7">
       <div className="mb-6">
         <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-ink2">
           Your response
         </p>
         <p className="text-sm leading-6 text-ink2">
-          {isAdmin
-            ? "Admin mode: you can resubmit and update your existing row for this op."
-            : "Complete the fields below. Your Discord account will be locked to this op after submission."}
+          {!isAdmin && "Complete the fields below. Your Discord account will be locked to this op after submission."}
         </p>
       </div>
 
@@ -266,7 +264,7 @@ function SubmissionLocked() {
 
   return (
     <>
-      <section className="premium-card p-6 sm:p-7" aria-labelledby="submission-locked-title">
+      <section className="premium-card mx-auto w-full p-6 sm:p-7" aria-labelledby="submission-locked-title">
         <div className="mb-5 flex items-start gap-4">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan/30 bg-cyan/10 text-cyan">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
