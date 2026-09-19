@@ -2,24 +2,15 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/admin";
+import { getRole, isAdmin } from "@/lib/admin";
 import { notifyDiscord } from "@/lib/discord";
-
-function alreadySubmittedResponse() {
-  return NextResponse.json(
-    {
-      error:
-        "You've already submitted for this op. If you need to change your response, please DM a mod or admin.",
-      alreadySubmitted: true,
-    },
-    { status: 409 }
-  );
-}
 
 export async function POST(req: Request) {
   const session = await auth();
   const user = session?.user as any;
-  if (!user?.discordId) {
+  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+
+  if (!discordId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
@@ -49,33 +40,44 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Hours must be a valid number" }, { status: 400 });
   }
 
-  const admin = await isAdmin(user.discordId);
-
-  let submission;
-  if (admin) {
-    submission = await prisma.submission.upsert({
-      where: {
-        opId_discordId: {
-          opId,
-          discordId: user.discordId,
-        },
-      },
-      create: {
+  const normalizedIgn = ign.trim();
+  const existing = await prisma.submission.findUnique({
+    where: {
+      opId_discordId: {
         opId,
-        discordId: user.discordId,
-        discordUsername: user.username ?? "Unknown",
-        discordAvatar: user.avatar ?? null,
-        ign: ign.trim(),
-        attending,
-        hasPilot,
-        pilotName: hasPilot ? pilotName.trim() : null,
-        hours: hoursNum,
-        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+        discordId,
       },
-      update: {
+    },
+    select: { id: true },
+  });
+
+  const submissionsForOp = await prisma.submission.findMany({
+    where: {
+      opId,
+      ...(existing ? { id: { not: existing.id } } : {}),
+    },
+    select: { ign: true },
+  });
+
+  const normalizedIgnKey = normalizedIgn.toLowerCase();
+  const duplicateIgn = submissionsForOp.some(
+    (submission) => submission.ign.trim().toLowerCase() === normalizedIgnKey
+  );
+
+  if (duplicateIgn) {
+    return NextResponse.json(
+      { error: "That IGN is already used by another submission." },
+      { status: 409 }
+    );
+  }
+
+  if (existing) {
+    const submission = await prisma.submission.update({
+      where: { id: existing.id },
+      data: {
         discordUsername: user.username ?? "Unknown",
         discordAvatar: user.avatar ?? null,
-        ign: ign.trim(),
+        ign: normalizedIgn,
         attending,
         hasPilot,
         pilotName: hasPilot ? pilotName.trim() : null,
@@ -84,51 +86,68 @@ export async function POST(req: Request) {
         createdAt: new Date(),
       },
     });
-  } else {
-    const existing = await prisma.submission.findFirst({
-      where: { opId, discordId: user.discordId },
-      select: { id: true },
-    });
-    if (existing) return alreadySubmittedResponse();
 
-    try {
-      submission = await prisma.submission.create({
-        data: {
-          opId,
-          discordId: user.discordId,
-          discordUsername: user.username ?? "Unknown",
-          discordAvatar: user.avatar ?? null,
-          ign: ign.trim(),
-          attending,
-          hasPilot,
-          pilotName: hasPilot ? pilotName.trim() : null,
-          hours: hoursNum,
-          notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
-        },
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        return alreadySubmittedResponse();
-      }
-      throw error;
-    }
+    await notifyDiscord({
+      opId,
+      discordUsername: user.username ?? "Unknown",
+      ign: submission.ign,
+      attending: submission.attending,
+      hasPilot: submission.hasPilot,
+      pilotName: submission.pilotName,
+      hours: submission.hours,
+      notes: submission.notes,
+    });
+
+    return NextResponse.json({ ok: true, id: submission.id, created: false });
   }
 
-  await notifyDiscord({
-    opId,
-    discordUsername: user.username ?? "Unknown",
-    ign: submission.ign,
-    attending: submission.attending,
-    hasPilot: submission.hasPilot,
-    pilotName: submission.pilotName,
-    hours: submission.hours,
-    notes: submission.notes,
-  });
+  try {
+    const submission = await prisma.submission.create({
+      data: {
+        opId,
+        discordId,
+        discordUsername: user.username ?? "Unknown",
+        discordAvatar: user.avatar ?? null,
+        ign: normalizedIgn,
+        attending,
+        hasPilot,
+        pilotName: hasPilot ? pilotName.trim() : null,
+        hours: hoursNum,
+        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+      },
+    });
 
-  return NextResponse.json({ ok: true, id: submission.id });
+    await notifyDiscord({
+      opId,
+      discordUsername: user.username ?? "Unknown",
+      ign: submission.ign,
+      attending: submission.attending,
+      hasPilot: submission.hasPilot,
+      pilotName: submission.pilotName,
+      hours: submission.hours,
+      notes: submission.notes,
+    });
+
+    return NextResponse.json({ ok: true, id: submission.id, created: true });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const ownSubmission = await prisma.submission.findFirst({
+        where: { opId, discordId },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+
+      if (ownSubmission) {
+        return NextResponse.json({
+          error: "Your submission already exists. Refresh the form and try again.",
+        }, { status: 409 });
+      }
+    }
+    throw error;
+  }
 }
 
 export async function GET() {
@@ -145,15 +164,16 @@ export async function GET() {
     prisma.adminUser.findMany({ select: { discordId: true } }),
   ]);
 
-  const adminIds = new Set([
-    ...admins.map((admin) => admin.discordId),
-    ...(process.env.OWNER_DISCORD_ID ? [process.env.OWNER_DISCORD_ID] : []),
-  ]);
+  const adminIds = new Set(admins.map((admin) => admin.discordId.trim()));
+
+  const submissionsWithRoles = await Promise.all(
+    submissions.map(async (submission) => ({
+      ...submission,
+      role: await getRole(submission.discordId, adminIds),
+    }))
+  );
 
   return NextResponse.json({
-    submissions: submissions.map((submission) => ({
-      ...submission,
-      isAdmin: adminIds.has(submission.discordId),
-    })),
+    submissions: submissionsWithRoles,
   });
 }
