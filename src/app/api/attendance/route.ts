@@ -5,17 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/admin";
 import { notifyDiscord } from "@/lib/discord";
 
-function alreadySubmittedResponse() {
-  return NextResponse.json(
-    {
-      error:
-        "You've already submitted for this op. If you need to change your response, please DM a mod or admin.",
-      alreadySubmitted: true,
-    },
-    { status: 409 }
-  );
-}
-
 export async function POST(req: Request) {
   const session = await auth();
   const user = session?.user as any;
@@ -52,9 +41,13 @@ export async function POST(req: Request) {
   }
 
   const normalizedIgn = ign.trim();
-  const existing = await prisma.submission.findFirst({
-    where: { opId, discordId },
-    orderBy: { createdAt: "desc" },
+  const existing = await prisma.submission.findUnique({
+    where: {
+      opId_discordId: {
+        opId,
+        discordId,
+      },
+    },
     select: { id: true },
   });
 
