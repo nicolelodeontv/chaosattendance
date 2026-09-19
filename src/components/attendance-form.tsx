@@ -449,7 +449,7 @@ export function AttendanceForm({
               {submission ? "Edit response" : "Your response"}
             </p>
             <p className="text-sm leading-6 text-ink2">
-              Complete the fields below. Your response is tied to your Discord account for this op.
+              Complete the fields below.
             </p>
           </div>
           <div className="shrink-0 rounded-full border border-line bg-panel2 px-3 py-1.5 text-xs text-ink2">
