@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { SuccessDialog } from "@/components/success-dialog";
@@ -27,7 +27,6 @@ function validateField(field: FieldName, value: string, hasPilot: "yes" | "no") 
 type Status = "idle" | "submitting" | "error";
 
 type InitialSubmission = {
-  id: string;
   ign: string;
   attending: boolean;
   hasPilot: boolean;
