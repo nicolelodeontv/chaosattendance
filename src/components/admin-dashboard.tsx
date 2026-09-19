@@ -555,6 +555,9 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
   const [newId, setNewId] = useState("");
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [removeTarget, setRemoveTarget] = useState<Admin | null>(null);
+  const [removeLoading, setRemoveLoading] = useState(false);
+  const [removeError, setRemoveError] = useState("");
 
   async function load() {
     const res = await fetch("/api/admin/admins");
