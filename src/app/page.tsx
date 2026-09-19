@@ -2,6 +2,7 @@ import { auth, signIn } from "@/auth";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function Home({
   const guildName = settings?.guildName ?? "Squadron";
   const currentOpId = settings?.currentOpId?.trim() || "current";
   const discordId = (session?.user as any)?.discordId;
+  const admin = await isAdmin(discordId);
   const alreadySubmitted = Boolean(
     discordId &&
       (await prisma.submission.findFirst({
@@ -48,7 +50,7 @@ export default async function Home({
                 {currentOpId}
               </span>
             </div>
-            <AttendanceForm alreadySubmitted={alreadySubmitted} />
+            <AttendanceForm alreadySubmitted={alreadySubmitted} isAdmin={admin} />
           </>
         ) : (
           <div className="premium-card p-7 sm:p-9">
