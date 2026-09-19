@@ -243,8 +243,10 @@ function SubmissionsTab() {
           </tbody>
         </table>
       </div>
-      {selected && createPortal(
-        <div
+      {selected
+        ? createPortal(
+            <>
+              <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
@@ -277,9 +279,10 @@ function SubmissionsTab() {
               <p className="text-xs uppercase tracking-[0.12em] text-ink2">Notes</p>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{selected.notes ?? "—"}</p>
             </div>
-          </div>
-        </div>
-      ), document.body)}
+              </div>
+            </>
+          , document.body)
+        : null}
     </div>
   );
 }
