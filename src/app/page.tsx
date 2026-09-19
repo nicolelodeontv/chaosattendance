@@ -32,7 +32,7 @@ export default async function Home({
     <div className="min-h-screen">
       <Navbar guildName={guildName} />
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+      <main className="mx-auto flex w-full max-w-3xl flex-col px-4 py-10 sm:px-6 sm:py-14">
         {session?.user ? (
           <>
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -51,7 +51,7 @@ export default async function Home({
                 {currentOpId}
               </span>
             </div>
-            <AttendanceForm alreadySubmitted={alreadySubmitted} isAdmin={admin} />
+            <div className="mx-auto w-full"><AttendanceForm alreadySubmitted={alreadySubmitted} isAdmin={admin} /></div>
           </>
         ) : (
           <div className="premium-card p-7 sm:p-9">
