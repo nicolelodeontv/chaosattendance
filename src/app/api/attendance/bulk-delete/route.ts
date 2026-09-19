@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/admin";
+import { isOwner } from "@/lib/admin";
+
 
 const MAX_IDS = 5000;
 
@@ -13,7 +14,11 @@ export async function POST(req: Request) {
   const session = await auth();
   const user = session?.user as any;
 
-  if (!(await isAdmin(user?.discordId))) {
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  if (!isOwner(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
