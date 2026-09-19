@@ -695,5 +695,6 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
         </p>
       </div>
     </div>
+    </>
   );
 }
