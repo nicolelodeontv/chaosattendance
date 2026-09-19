@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 type Submission = {
   id: string;
+  discordId: string;
   opId: string;
   discordUsername: string;
   ign: string;
@@ -50,6 +51,9 @@ function SubmissionsTab() {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
+  const [selected, setSelected] = useState<Submission | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -62,6 +66,29 @@ function SubmissionsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!selected) {
+      setAvatarUrl(null);
+      setAvatarLoading(false);
+      return;
+    }
+    let active = true;
+    setAvatarLoading(true);
+    setAvatarUrl(null);
+    fetch(`/api/admin/discord-avatar?discordId=${encodeURIComponent(selected.discordId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (active) setAvatarUrl(data.avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png");
+      })
+      .catch(() => {
+        if (active) setAvatarUrl("https://cdn.discordapp.com/embed/avatars/0.png");
+      })
+      .finally(() => {
+        if (active) setAvatarLoading(false);
+      });
+    return () => { active = false; };
+  }, [selected]);
 
   async function remove(id: string) {
     if (!confirm("Delete this submission?")) return;
@@ -172,7 +199,7 @@ function SubmissionsTab() {
             {filtered.map((r) => (
               <tr key={r.id} className="border-b border-line last:border-0">
                 <td className="px-4 py-3 font-display text-xs text-cyan">{r.opId}</td>
-                <td className="px-4 py-3 text-ink">{r.ign}</td>
+                <td className="px-4 py-3 text-ink"><button type="button" onClick={() => setSelected(r)} className="rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">{r.ign}</button></td>
                 <td className="px-4 py-3 text-ink2">{r.discordUsername}</td>
                 <td className="px-4 py-3">
                   <Badge ok={r.attending} yes="Attending" no="Not Attending" />
@@ -205,6 +232,43 @@ function SubmissionsTab() {
           </tbody>
         </table>
       </div>
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="submission-detail-title"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}
+        >
+          <div className="w-full max-w-lg premium-card p-6 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Submission detail</p>
+                <h3 id="submission-detail-title" className="font-display text-xl text-ink">{selected.ign}</h3>
+              </div>
+              <button type="button" onClick={() => setSelected(null)} className="icon-button" aria-label="Close submission detail dialog">×</button>
+            </div>
+            <div className="mt-5 flex flex-col items-center text-center">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-line bg-panel2">
+                {avatarLoading ? <div className="h-full w-full animate-pulse bg-panel2" aria-label="Loading Discord avatar" /> : <img src={avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="h-full w-full object-cover" />}
+              </div>
+              <p className="mt-3 font-medium text-ink">{selected.discordUsername}</p>
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">IGN</p><p className="mt-1.5 text-sm text-ink">{selected.ign}</p></div>
+              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Attendance</p><p className="mt-1.5 text-sm text-ink">{selected.attending ? "Attending" : "Not Attending"}</p></div>
+              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot</p><p className="mt-1.5 text-sm text-ink">{selected.hasPilot ? "Have Pilot" : "No Pilot"}</p></div>
+              {selected.hasPilot && <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot Name</p><p className="mt-1.5 text-sm text-ink">{selected.pilotName ?? "—"}</p></div>}
+              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Hours</p><p className="mt-1.5 text-sm text-ink">{selected.hours}</p></div>
+              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Submitted</p><p className="mt-1.5 text-sm text-ink">{new Date(selected.createdAt).toLocaleString()}</p></div>
+            </div>
+            <div className="mt-3 rounded-lg border border-line bg-panel2/60 p-4">
+              <p className="text-xs uppercase tracking-[0.12em] text-ink2">Notes</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{selected.notes ?? "—"}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
