@@ -58,18 +58,20 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
-  const conflictingSubmission = await prisma.submission.findFirst({
+  const submissionsForOp = await prisma.submission.findMany({
     where: {
       opId,
       ...(existing ? { id: { not: existing.id } } : {}),
     },
-    select: { id: true, ign: true },
+    select: { ign: true },
   });
 
-  if (
-    conflictingSubmission &&
-    conflictingSubmission.ign.trim().toLowerCase() === normalizedIgn.toLowerCase()
-  ) {
+  const normalizedIgnKey = normalizedIgn.toLowerCase();
+  const duplicateIgn = submissionsForOp.some(
+    (submission) => submission.ign.trim().toLowerCase() === normalizedIgnKey
+  );
+
+  if (duplicateIgn) {
     return NextResponse.json(
       { error: "That IGN is already used by another submission." },
       { status: 409 }
