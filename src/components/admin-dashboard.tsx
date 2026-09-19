@@ -62,6 +62,11 @@ function SubmissionsTab() {
   const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [currentOpId, setCurrentOpId] = useState("");
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState("");
+  const [bulkConfirmText, setBulkConfirmText] = useState("");
 
   async function load() {
     setLoading(true);
@@ -73,6 +78,10 @@ function SubmissionsTab() {
 
   useEffect(() => {
     load();
+    fetch("/api/admin/settings")
+      .then((res) => res.json())
+      .then((data) => setCurrentOpId(data.settings?.currentOpId?.trim() || "current"))
+      .catch(() => setCurrentOpId("current"));
   }, []);
 
   function showToast(message: string) {
@@ -107,6 +116,46 @@ function SubmissionsTab() {
       setDeleteError(err.message || "Unable to delete submission.");
     } finally {
       setDeleteLoading(false);
+    }
+  }
+
+  function requestBulkDelete() {
+    setBulkDeleteError("");
+    setBulkConfirmText("");
+    setBulkDeleteOpen(true);
+  }
+
+  async function removeBulk() {
+    const hasFilter = filter.trim().length > 0;
+    const targets = hasFilter ? currentOpRows : currentOpRows;
+    if (!currentOpId || targets.length === 0 || bulkConfirmText !== "DELETE") return;
+
+    setBulkDeleteLoading(true);
+    setBulkDeleteError("");
+
+    try {
+      const res = await fetch("/api/attendance/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          opId: currentOpId,
+          ...(hasFilter ? { ids: targets.map((row) => row.id) } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to remove submissions.");
+      }
+
+      await load();
+      setBulkDeleteOpen(false);
+      setBulkConfirmText("");
+      showToast(`${data.deleted ?? 0} submissions removed`);
+    } catch (err: unknown) {
+      setBulkDeleteError(err instanceof Error ? err.message : "Unable to remove submissions.");
+    } finally {
+      setBulkDeleteLoading(false);
     }
   }
 
@@ -156,6 +205,13 @@ function SubmissionsTab() {
     );
   });
 
+  const hasFilter = filter.trim().length > 0;
+  const currentOpRows = filtered.filter((r) => r.opId === currentOpId);
+  const bulkCount = currentOpRows.length;
+  const bulkButtonLabel = hasFilter
+    ? `Remove filtered (${bulkCount})`
+    : `Remove all (${bulkCount})`;
+
   return (
     <div className="premium-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
@@ -163,7 +219,7 @@ function SubmissionsTab() {
           <p className="font-display text-sm text-ink">Submission log</p>
           <p className="mt-1 text-xs text-ink2">Search by op, IGN or Discord username.</p>
         </div>
-        <div className="flex w-full gap-2 sm:w-auto">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <input
             type="text"
             placeholder="Filter submissions"
@@ -176,6 +232,14 @@ function SubmissionsTab() {
           </button>
           <button onClick={exportCsv} className="premium-button-secondary hidden shrink-0 px-3 sm:inline-flex">
             Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={requestBulkDelete}
+            disabled={!currentOpId || bulkCount === 0 || bulkDeleteLoading}
+            className="inline-flex min-h-[42px] max-w-full shrink-0 items-center justify-center rounded-[10px] border border-red/70 bg-red/5 px-3 text-sm font-semibold text-red transition-colors hover:border-red hover:bg-red/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {bulkButtonLabel}
           </button>
         </div>
       </div>
@@ -259,6 +323,49 @@ function SubmissionsTab() {
         </tbody>
       </table></div>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Remove all submissions?"
+        message={
+          <>
+            This will permanently delete <strong className="font-medium text-ink">{bulkCount}</strong> submissions. Everyone affected will be able to submit again. This can't be undone.
+            {bulkDeleteError && (
+              <div className="mt-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
+                {bulkDeleteError}
+              </div>
+            )}
+          </>
+        }
+        confirmLabel="Remove"
+        variant="danger"
+        loading={bulkDeleteLoading}
+        confirmDisabled={bulkConfirmText !== "DELETE"}
+        onCancel={() => {
+          if (!bulkDeleteLoading) {
+            setBulkDeleteOpen(false);
+            setBulkConfirmText("");
+            setBulkDeleteError("");
+          }
+        }}
+        onConfirm={removeBulk}
+      >
+        <div className="mt-4 space-y-2">
+          <label htmlFor="bulk-delete-confirm" className="text-sm font-medium text-ink">
+            Type DELETE to confirm
+          </label>
+          <input
+            id="bulk-delete-confirm"
+            type="text"
+            value={bulkConfirmText}
+            onChange={(event) => setBulkConfirmText(event.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            autoCapitalize="characters"
+            aria-label="Type DELETE to confirm"
+            placeholder="DELETE"
+          />
+        </div>
+      </ConfirmDialog>
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete submission?"
