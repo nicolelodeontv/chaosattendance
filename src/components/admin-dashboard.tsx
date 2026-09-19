@@ -54,6 +54,18 @@ function SubmissionsTab() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const res = await fetch("/api/attendance");
+    const data = await res.json();
+    setRows(data.submissions ?? []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
   async function remove(id: string) {
     if (!confirm(`Delete this submission? ${rows.find((row) => row.id === id)?.ign ?? "This member"} will be able to submit again.`)) return;
     await fetch("/api/attendance/" + id, { method: "DELETE" });
