@@ -243,47 +243,86 @@ function SubmissionsTab() {
           </tbody>
         </table>
       </div>
-      {selected
-        ? createPortal(
-            <>
-              <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="submission-detail-title"
-          onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}
-        >
-          <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Submission detail</p>
-                <h3 id="submission-detail-title" className="font-display text-xl text-ink">{selected.ign}</h3>
-              </div>
-              <button type="button" onClick={() => setSelected(null)} className="icon-button" aria-label="Close submission detail dialog">×</button>
-            </div>
-            <div className="mt-5 flex flex-col items-center text-center">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-line bg-panel2">
-                {avatarLoading ? <div className="h-full w-full animate-pulse bg-panel2" aria-label="Loading Discord avatar" /> : <img src={avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="h-full w-full object-cover" />}
-              </div>
-              <p className="mt-3 font-medium text-ink">{selected.discordUsername}</p>
-            </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">IGN</p><p className="mt-1.5 text-sm text-ink">{selected.ign}</p></div>
-              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Attendance</p><p className="mt-1.5 text-sm text-ink">{selected.attending ? "Attending" : "Not Attending"}</p></div>
-              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot</p><p className="mt-1.5 text-sm text-ink">{selected.hasPilot ? "Have Pilot" : "No Pilot"}</p></div>
-              {selected.hasPilot && <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot Name</p><p className="mt-1.5 text-sm text-ink">{selected.pilotName ?? "—"}</p></div>}
-              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Hours</p><p className="mt-1.5 text-sm text-ink">{selected.hours}</p></div>
-              <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Submitted</p><p className="mt-1.5 text-sm text-ink">{new Date(selected.createdAt).toLocaleString()}</p></div>
-            </div>
-            <div className="mt-3 rounded-lg border border-line bg-panel2/60 p-4">
-              <p className="text-xs uppercase tracking-[0.12em] text-ink2">Notes</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{selected.notes ?? "—"}</p>
-            </div>
-              </div>
-            </>
-          , document.body)
-        : null}
+      {selected ? <SubmissionDetailModal selected={selected} onClose={() => setSelected(null)} /> : null}
     </div>
+  );
+}
+
+function SubmissionDetailModal({
+  selected,
+  onClose,
+}: {
+  selected: Submission;
+  onClose: () => void;
+}) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="submission-detail-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
+        <SubmissionDetailHeader selected={selected} onClose={onClose} />
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function SubmissionDetailHeader({ selected, onClose }: { selected: Submission; onClose: () => void }) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setAvatarLoading(true);
+    setAvatarUrl(null);
+    fetch(`/api/admin/discord-avatar?discordId=${encodeURIComponent(selected.discordId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (active) setAvatarUrl(data.avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png");
+      })
+      .catch(() => {
+        if (active) setAvatarUrl("https://cdn.discordapp.com/embed/avatars/0.png");
+      })
+      .finally(() => {
+        if (active) setAvatarLoading(false);
+      });
+    return () => { active = false; };
+  }, [selected.discordId]);
+
+  return (
+    <>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Submission detail</p>
+          <h3 id="submission-detail-title" className="font-display text-xl text-ink">{selected.ign}</h3>
+        </div>
+        <button type="button" onClick={onClose} className="icon-button" aria-label="Close submission detail dialog">×</button>
+      </div>
+      <div className="mt-5 flex flex-col items-center text-center">
+        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-line bg-panel2">
+          {avatarLoading ? <div className="h-full w-full animate-pulse bg-panel2" aria-label="Loading Discord avatar" /> : <img src={avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="h-full w-full object-cover" />}
+        </div>
+        <p className="mt-3 font-medium text-ink">{selected.discordUsername}</p>
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">IGN</p><p className="mt-1.5 text-sm text-ink">{selected.ign}</p></div>
+        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Attendance</p><p className="mt-1.5 text-sm text-ink">{selected.attending ? "Attending" : "Not Attending"}</p></div>
+        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot</p><p className="mt-1.5 text-sm text-ink">{selected.hasPilot ? "Have Pilot" : "No Pilot"}</p></div>
+        {selected.hasPilot && <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot Name</p><p className="mt-1.5 text-sm text-ink">{selected.pilotName ?? "—"}</p></div>}
+        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Hours</p><p className="mt-1.5 text-sm text-ink">{selected.hours}</p></div>
+        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Submitted</p><p className="mt-1.5 text-sm text-ink">{new Date(selected.createdAt).toLocaleString()}</p></div>
+      </div>
+      <div className="mt-3 rounded-lg border border-line bg-panel2/60 p-4">
+        <p className="text-xs uppercase tracking-[0.12em] text-ink2">Notes</p>
+        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{selected.notes ?? "—"}</p>
+      </div>
+    </>
   );
 }
 
