@@ -259,7 +259,6 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
           <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
             <th className="px-2.5 py-3 font-medium sm:px-3">Op</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">IGN</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">Role</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">Discord</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">Attendance</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">Pilot</th>
@@ -272,14 +271,14 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
         <tbody>
           {loading && (
             <tr>
-              <td colSpan={9 className="px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
                 Loading…
               </td>
             </tr>
           )}
           {!loading && filtered.length === 0 && (
             <tr>
-              <td colSpan={10} className="px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
                 No submissions found.
               </td>
             </tr>
