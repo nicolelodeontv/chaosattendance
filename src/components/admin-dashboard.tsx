@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Submission = {
   id: string;
@@ -232,7 +233,7 @@ function SubmissionsTab() {
           </tbody>
         </table>
       </div>
-      {selected && (
+      {selected && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
           role="dialog"
@@ -240,7 +241,7 @@ function SubmissionsTab() {
           aria-labelledby="submission-detail-title"
           onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}
         >
-          <div className="w-full max-w-lg premium-card p-6 shadow-2xl sm:p-7">
+          <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Submission detail</p>
@@ -268,7 +269,7 @@ function SubmissionsTab() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }
