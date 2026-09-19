@@ -614,6 +614,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
   if (loading) return <p className="text-sm text-ink2">Loading…</p>;
 
   return (
+    <>
       <ConfirmDialog
         open={Boolean(removeTarget)}
         title="Remove admin?"
