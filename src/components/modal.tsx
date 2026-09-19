@@ -12,7 +12,9 @@ type BaseModalProps = {
   onClose: () => void;
   children?: ReactNode;
   footer?: ReactNode;
+  beforeTitle?: ReactNode;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  cardClassName?: string;
   role?: "dialog" | "alertdialog";
   closeOnEscape?: boolean;
   closeOnBackdrop?: boolean;
@@ -27,7 +29,9 @@ export function BaseModal({
   onClose,
   children,
   footer,
+  beforeTitle,
   initialFocusRef,
+  cardClassName = "",
   role = "dialog",
   closeOnEscape = true,
   closeOnBackdrop = true,
@@ -123,12 +127,14 @@ export function BaseModal({
     >
       <div
         ref={dialogRef}
-        className="confirm-dialog-card premium-card w-full max-w-md p-6 shadow-2xl sm:p-7"
+        className={["confirm-dialog-card premium-card w-full max-w-md p-6 shadow-2xl sm:p-7", cardClassName].filter(Boolean).join(" ")}
         role={role}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={message ? messageId : undefined}
       >
+        {beforeTitle}
+
         <h2 id={titleId} className="font-display text-xl text-ink">
           {title}
         </h2>
