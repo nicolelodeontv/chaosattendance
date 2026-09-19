@@ -74,6 +74,7 @@ function SubmissionsTab() {
   useEffect(() => {
     load();
   }, []);
+
   async function remove(id: string) {
     if (!confirm(`Delete this submission? ${rows.find((row) => row.id === id)?.ign ?? "This member"} will be able to submit again.`)) return;
     await fetch("/api/attendance/" + id, { method: "DELETE" });
@@ -181,10 +182,10 @@ function SubmissionsTab() {
           )}
           {filtered.map((r) => (
             <tr key={r.id} className="border-b border-line last:border-0">
-              <td className="truncate px-2.5 py-3 font-display text-xs text-cyan sm:px-3" title={r.opId}>{r.opId}</td>
-              <td className="px-2.5 py-3 text-ink sm:px-3">
-                <div className="min-w-0 truncate">
-                  <button type="button" title={r.ign} onClick={() => setSelected(r)} className="max-w-full truncate rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+              <td className="px-2.5 py-3 font-display text-xs text-cyan sm:px-3 whitespace-normal break-words">{r.opId}</td>
+              <td className="px-2.5 py-3 text-ink sm:px-3 whitespace-normal break-words">
+                <div className="min-w-0">
+                  <button type="button" onClick={() => setSelected(r)} className="max-w-full break-words rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
                   {r.isAdmin && (
@@ -194,23 +195,18 @@ function SubmissionsTab() {
                   )}
                 </div>
               </td>
-              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3" title={r.discordUsername}>{r.discordUsername}</td>
-              <td className="whitespace-nowrap px-2.5 py-3 sm:px-3">
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">{r.discordUsername}</td>
+              <td className="px-2.5 py-3 sm:px-3 whitespace-normal">
                 <Badge ok={r.attending} yes="Attending" no="Not Attending" />
               </td>
-              <td
-                className="truncate px-2.5 py-3 text-ink2 sm:px-3"
-                title={r.hasPilot ? `Have Pilot — ${r.pilotName ?? ""}` : "No Pilot"}
-              >
-                {r.hasPilot
-                  ? "Have Pilot — " + (r.pilotName ?? "")
-                  : "No Pilot"}
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">
+                {r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}
               </td>
-              <td className="whitespace-nowrap px-2.5 py-3 text-ink2 sm:px-3">{r.hours}</td>
-              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3" title={r.notes ?? undefined}>
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">{r.hours}</td>
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">
                 {r.notes ?? "—"}
               </td>
-              <td className="whitespace-nowrap px-2.5 py-3 text-ink2 sm:px-3">
+              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-normal break-words">
                 {new Date(r.createdAt).toLocaleDateString()}
               </td>
               <td className="px-2.5 py-3 text-right sm:px-3">
@@ -220,12 +216,12 @@ function SubmissionsTab() {
                   </button>
                   <button
                     onClick={() => remove(r.id)}
-                  className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
-                  aria-label="Delete submission"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M8 6V4a1 1 0 0 1 1 1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
-                  </svg>
+                    className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
+                    aria-label="Delete submission"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M8 6V4a1 1 0 0 1 1 1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+                    </svg>
                   </button>
                 </div>
               </td>
@@ -379,7 +375,7 @@ function SubmissionDetailHeader({ selected, onClose }: { selected: Submission; o
       </div>
       <div className="mt-5 flex flex-col items-center text-center">
         <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-line bg-panel2">
-          {avatarLoading ? <div className="h-full w-full animate-pulse bg-panel2" aria-label="Loading Discord avatar" /> : <img src={avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="h-full w-full object-cover" />}
+          {avatarLoading ? <div className="h-full w-full animate-pulse bg-panel2" aria-label="Loading Discord avatar" /> : <img src={avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="h-full w-full object-cover" /> }
         </div>
         <p className="mt-3 font-medium text-ink">{selected.discordUsername}</p>
       </div>
