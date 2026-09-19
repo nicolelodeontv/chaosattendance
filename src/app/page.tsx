@@ -2,7 +2,6 @@ import { auth, signIn } from "@/auth";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -17,16 +16,24 @@ export default async function Home({
     .catch(() => null);
   const guildName = settings?.guildName ?? "Squadron";
   const currentOpId = settings?.currentOpId?.trim() || "current";
-  const discordId = (session?.user as any)?.discordId;
-  const admin = await isAdmin(discordId);
-  const alreadySubmitted = Boolean(
-    discordId &&
-      !admin &&
-      (await prisma.submission.findFirst({
+  const discordId = typeof (session?.user as any)?.discordId === "string"
+    ? (session?.user as any).discordId.trim()
+    : "";
+  const ownSubmission = discordId
+    ? await prisma.submission.findFirst({
         where: { opId: currentOpId, discordId },
-        select: { id: true },
-      }))
-  );
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          ign: true,
+          attending: true,
+          hasPilot: true,
+          pilotName: true,
+          hours: true,
+          notes: true,
+        },
+      })
+    : null;
 
   return (
     <div className="min-h-screen">
@@ -44,14 +51,14 @@ export default async function Home({
                   Attendance report
                 </h1>
                 <p className="mt-1.5 text-sm leading-6 text-ink2">
-                  Log your status for this op. Each Discord account can submit once.
+                  Log your status for this op. Your response is tied to your Discord account.
                 </p>
               </div>
               <span className="w-fit rounded-full border border-line bg-panel2 px-3 py-1.5 font-display text-xs text-ink2">
                 {currentOpId}
               </span>
             </div>
-            <div className="mx-auto w-full"><AttendanceForm alreadySubmitted={alreadySubmitted} isAdmin={admin} /></div>
+            <div className="mx-auto w-full"><AttendanceForm initialSubmission={ownSubmission} /></div>
           </>
         ) : (
           <div className="premium-card p-7 sm:p-9">
