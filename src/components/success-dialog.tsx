@@ -39,15 +39,15 @@ export function SuccessDialog({
       messageId="success-dialog-message"
       onClose={onClose}
       initialFocusRef={okRef}
-    >
-      <div className="mt-6 flex justify-center" aria-hidden="true">
-        <div className="success-dialog-icon flex h-16 w-16 items-center justify-center rounded-full border border-cyan/30 bg-cyan/10 text-cyan">
+      beforeTitle={
+        <div className="success-dialog-icon mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-cyan/30 bg-cyan/10 text-cyan" aria-hidden="true">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="m6 12 4 4 8-8" />
           </svg>
         </div>
-      </div>
-
+      }
+      cardClassName="text-center"
+    >
       <div className="mt-6">
         <button
           ref={okRef}
