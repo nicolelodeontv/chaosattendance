@@ -49,10 +49,9 @@ BEGIN
 END
 $$;
 
- 
 -- Also remove legacy standalone unique indexes that are not represented as
 -- PostgreSQL unique constraints (for example, indexes created manually).
-DO $
+DO $$
 DECLARE
   index_name TEXT;
   column_names TEXT[];
@@ -86,7 +85,7 @@ BEGIN
     END IF;
   END LOOP;
 END
-$;
+$$;
 
 -- The submission identity is (opId, discordId). Creating the same key twice
 -- is intentionally rejected by the database without changing any rows.
