@@ -13,6 +13,12 @@ export async function isAdmin(discordId: string | undefined | null): Promise<boo
   return !!admin;
 }
 
-export function isOwner(discordId: string | undefined | null): boolean {
-  return !!discordId && discordId === process.env.OWNER_DISCORD_ID;
+type OwnerUser = {
+  discordId?: string | null;
+};
+
+export function isOwner(user: OwnerUser | null | undefined): boolean {
+  const ownerId = process.env.OWNER_DISCORD_ID?.trim();
+  const discordId = user?.discordId?.trim();
+  return Boolean(ownerId && discordId && discordId === ownerId);
 }
