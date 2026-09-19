@@ -40,6 +40,7 @@ export function ConfirmDialog({
       message={message}
       messageId="confirm-dialog-message"
       onClose={onCancel}
+      children={children}
       initialFocusRef={cancelRef}
       role="dialog"
       closeOnEscape={!loading}
