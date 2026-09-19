@@ -1,10 +1,4 @@
-import type { UserRole } from "@/types/roles";
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  owner: "OWNER",
-  admin: "ADMIN",
-  member: "MEMBER",
-};
+import { ROLE_LABELS, type UserRole } from "@/types/roles";
 
 const ROLE_STYLES: Record<UserRole, string> = {
   owner: "border-amber-400/40 bg-amber-400/10 text-amber-600 dark:text-amber-300",
