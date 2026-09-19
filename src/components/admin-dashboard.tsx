@@ -51,7 +51,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
 
       {visibleTab === "submissions" && <SubmissionsTab isOwner={isOwner} />}
       {visibleTab === "settings" && isOwner && <SettingsTab />}
-      {visibleTab === "access" && isOwner && <AccessTab isOwner={isOwner} />}
+      {visibleTab === "access" && isOwner && <AccessTab />}
     </div>
   );
 }
@@ -700,7 +700,7 @@ function SettingsTab() {
   );
 }
 
-function AccessTab({ isOwner }: { isOwner: boolean }) {
+function AccessTab() {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newId, setNewId] = useState("");
   const [newName, setNewName] = useState("");
