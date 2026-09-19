@@ -255,6 +255,10 @@ body {
     transform-origin: center;
   }
 
+  .success-dialog-icon {
+    animation: success-dialog-icon-scale 0.25s ease-out both;
+  }
+
   @keyframes confirm-dialog-fade {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -265,9 +269,15 @@ body {
     to { opacity: 1; transform: scale(1); }
   }
 
+  @keyframes success-dialog-icon-scale {
+    from { opacity: 0; transform: scale(0.72); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .confirm-dialog-backdrop,
-    .confirm-dialog-card {
+    .confirm-dialog-card,
+    .success-dialog-icon {
       animation: none;
     }
   }

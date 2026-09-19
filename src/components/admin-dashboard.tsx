@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
 
 type Submission = {
@@ -282,11 +283,11 @@ function SubmissionsTab() {
           editing={editingRow}
           onClose={() => { setSelected(null); setEditingRow(false); }}
           onEdit={() => setEditingRow(true)}
-          onSaved={(updated) => {
+          onSaved={async (updated) => {
             setRows((current) => current.map((row) => row.id === updated.id ? updated : row));
             setSelected(updated);
             setEditingRow(false);
-            showToast(`Attendance updated for ${updated.ign}`);
+            await load();
           }}
         />
       ) : null}
@@ -305,10 +306,12 @@ function SubmissionDetailModal({
   editing: boolean;
   onClose: () => void;
   onEdit: () => void;
-  onSaved: (submission: Submission) => void;
+  onSaved: (submission: Submission) => void | Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [pendingSaved, setPendingSaved] = useState<Submission | null>(null);
   const [ign, setIgn] = useState(selected.ign);
   const [attending, setAttending] = useState(selected.attending);
   const [hasPilot, setHasPilot] = useState(selected.hasPilot);
@@ -337,7 +340,9 @@ function SubmissionDetailModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Unable to update submission.");
-      onSaved(data.submission);
+      setPendingSaved(data.submission);
+      setSuccessOpen(true);
+      void onSaved(data.submission);
     } catch (err: any) {
       setError(err.message || "Unable to update submission.");
     } finally {
@@ -345,8 +350,25 @@ function SubmissionDetailModal({
     }
   }
 
+  function closeSuccess() {
+    setSuccessOpen(false);
+    setPendingSaved(null);
+  }
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submission-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <>
+      <SuccessDialog
+        open={successOpen}
+        title="Submission updated"
+        message={
+          <>
+            <strong className="font-semibold text-ink">{pendingSaved?.ign ?? selected.ign}</strong>'s response has been saved.
+          </>
+        }
+        onClose={closeSuccess}
+      />
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submission-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
         {editing ? (
           <>
@@ -381,7 +403,8 @@ function SubmissionDetailModal({
           </>
         )}
       </div>
-    </div>,
+    </div>
+    </>,
     document.body
   );
 }
@@ -457,7 +480,7 @@ function SettingsTab() {
   const [currentOpId, setCurrentOpId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -470,23 +493,34 @@ function SettingsTab() {
       });
   }, []);
 
+  function showToast(message: string) {
+    setToasts((current) => [
+      ...current,
+      { id: window.crypto.randomUUID(), message },
+    ]);
+  }
+
+  function dismissToast(id: string) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
+
   async function save() {
     setSaving(true);
-    setSaved(false);
-    await fetch("/api/admin/settings", {
+    const res = await fetch("/api/admin/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ webhookUrl, guildName, currentOpId }),
     });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+    if (res.ok) showToast("Settings saved");
   }
 
   if (loading) return <p className="text-sm text-ink2">Loading…</p>;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
+    <>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
       <div className="space-y-5">
         <div className="premium-card p-6">
           <p className="font-display text-sm text-ink">Operation</p>
@@ -535,7 +569,7 @@ function SettingsTab() {
             disabled={saving}
             className="premium-button mt-6 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? "Saving…" : saved ? "Saved" : "Save settings"}
+            {saving ? "Saving…" : "Save settings"}
           </button>
         </div>
       </div>
@@ -549,7 +583,8 @@ function SettingsTab() {
           Admin deletion removes the stored submission, which allows that member to submit again for the same op when a correction is needed.
         </p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -562,6 +597,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
   const [removeTarget, setRemoveTarget] = useState<Admin | null>(null);
   const [removeLoading, setRemoveLoading] = useState(false);
   const [removeError, setRemoveError] = useState("");
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   async function load() {
     const res = await fetch("/api/admin/admins");
@@ -575,16 +611,33 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
     load();
   }, []);
 
+  function showToast(message: string) {
+    setToasts((current) => [
+      ...current,
+      { id: window.crypto.randomUUID(), message },
+    ]);
+  }
+
+  function dismissToast(id: string) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
+
   async function addAdmin(e: React.FormEvent) {
     e.preventDefault();
     if (!newId.trim()) return;
-    await fetch("/api/admin/admins", {
+
+    const displayName = newName.trim() || newId.trim();
+    const res = await fetch("/api/admin/admins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ discordId: newId.trim(), username: newName.trim() }),
     });
+
     setNewId("");
     setNewName("");
+    if (res.ok) {
+      showToast(`Admin access granted to ${displayName}`);
+    }
     load();
   }
 
@@ -608,6 +661,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
       }
       await load();
       setRemoveTarget(null);
+      showToast("Admin access removed");
     } catch (err: any) {
       setRemoveError(err.message || "Unable to remove admin.");
     } finally {
@@ -619,6 +673,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
 
   return (
     <>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <ConfirmDialog
         open={Boolean(removeTarget)}
         title="Remove admin?"

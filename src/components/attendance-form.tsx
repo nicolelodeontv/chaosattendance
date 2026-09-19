@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { SuccessDialog } from "@/components/success-dialog";
 
 type FieldName = "ign" | "pilotName" | "hours";
 type FieldErrors = Partial<Record<FieldName, string>>;
@@ -41,7 +42,7 @@ export function AttendanceForm({
   const router = useRouter();
   const [status, setStatus] = useState<Status>(alreadySubmitted && !isAdmin ? "locked" : "idle");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [successOpen, setSuccessOpen] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({ ign: false, pilotName: false, hours: false });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const locked = status === "locked" && !isAdmin;
@@ -102,12 +103,6 @@ export function AttendanceForm({
     }, 0);
   }
 
-  useEffect(() => {
-    if (!success) return;
-    const timer = window.setTimeout(() => setSuccess(""), 2500);
-    return () => window.clearTimeout(timer);
-  }, [success]);
-
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (locked) return;
@@ -131,7 +126,6 @@ export function AttendanceForm({
     setTouched(nextTouched);
     setFieldErrors(nextErrors);
     setError("");
-    setSuccess("");
 
     if (Object.keys(nextErrors).length > 0) {
       setStatus("idle");
@@ -175,9 +169,7 @@ export function AttendanceForm({
 
       setStatus(isAdmin ? "idle" : "locked");
       setError("");
-      if (isAdmin) {
-        setSuccess(`Attendance updated for ${ign.trim()}`);
-      }
+      setSuccessOpen(true);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -185,12 +177,23 @@ export function AttendanceForm({
     }
   }
 
-  if (locked) {
-    return <SubmissionLocked />;
-  }
-
   return (
-    <form onSubmit={handleSubmit} noValidate className="premium-card mx-auto w-full p-6 sm:p-7">
+    <>
+      <SuccessDialog
+        open={successOpen}
+        title={alreadySubmitted ? "Attendance updated" : "Attendance submitted"}
+        message={
+          <>
+            Your response for <strong className="font-semibold text-ink">{ign.trim()}</strong> has been recorded.
+          </>
+        }
+        onClose={() => setSuccessOpen(false)}
+      />
+
+      {locked ? (
+        <SubmissionLocked />
+      ) : (
+        <form onSubmit={handleSubmit} noValidate className="premium-card mx-auto w-full p-6 sm:p-7">
       <div className="mb-6">
         <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-ink2">
           Your response
@@ -199,16 +202,6 @@ export function AttendanceForm({
           {!isAdmin && "Complete the fields below. Your Discord account will be locked to this op after submission."}
         </p>
       </div>
-
-      {success && (
-        <div
-          className="mb-4 rounded-md border border-cyan/30 bg-cyan/10 px-3 py-2.5 text-sm text-cyan"
-          role="status"
-          aria-live="polite"
-        >
-          {success}
-        </div>
-      )}
 
       <div className="mb-6 space-y-2">
         <label htmlFor="ign" className="text-sm font-medium text-ink">
@@ -362,7 +355,9 @@ export function AttendanceForm({
       >
         {status === "submitting" ? "Submitting…" : "Submit attendance"}
       </button>
-    </form>
+        </form>
+      )}
+    </>
   );
 }
 
