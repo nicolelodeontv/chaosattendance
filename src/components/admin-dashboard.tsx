@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Submission = {
   id: string;
@@ -56,6 +57,9 @@ function SubmissionsTab() {
   const [selected, setSelected] = useState<Submission | null>(null);
   const [editingRow, setEditingRow] = useState(false);
   const [toast, setToast] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     if (!toast) return;
@@ -75,10 +79,28 @@ function SubmissionsTab() {
     load();
   }, []);
 
+  function requestDelete(row: Submission) {
+    setDeleteTarget(row);
+    setDeleteError("");
+  }
+
   async function remove(id: string) {
-    if (!confirm(`Delete this submission? ${rows.find((row) => row.id === id)?.ign ?? "This member"} will be able to submit again.`)) return;
-    await fetch("/api/attendance/" + id, { method: "DELETE" });
-    setRows((r) => r.filter((row) => row.id !== id));
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/attendance/" + id, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Unable to delete submission.");
+      }
+      await load();
+      setDeleteTarget(null);
+      setToast("Submission deleted");
+    } catch (err: any) {
+      setDeleteError(err.message || "Unable to delete submission.");
+    } finally {
+      setDeleteLoading(false);
+    }
   }
 
   function exportCsv() {
@@ -215,7 +237,7 @@ function SubmissionsTab() {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m16 3 5 5L8 21H3v-5Z" /><path d="m14 5 5 5" /></svg>
                   </button>
                   <button
-                    onClick={() => remove(r.id)}
+                    onClick={() => requestDelete(r)}
                     className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
                     aria-label="Delete submission"
                   >
@@ -232,6 +254,24 @@ function SubmissionsTab() {
       {toast && (
         <div className="fixed right-4 top-4 z-[60] rounded-md border border-cyan/30 bg-panel px-4 py-3 text-sm text-cyan shadow-xl" role="status" aria-live="polite">{toast}</div>
       )}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete submission?"
+        message={
+          <>
+            <strong className="font-medium text-ink">{deleteTarget?.ign}</strong> will be able to submit again.
+            {deleteError && (
+              <div className="mt-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
+                {deleteError}
+              </div>
+            )}
+          </>
+        }
+        variant="danger"
+        loading={deleteLoading}
+        onCancel={() => { if (!deleteLoading) { setDeleteTarget(null); setDeleteError(""); } }}
+        onConfirm={() => deleteTarget ? remove(deleteTarget.id) : undefined}
+      />
       {selected ? (
         <SubmissionDetailModal
           selected={selected}
@@ -541,19 +581,55 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
     load();
   }
 
+  function requestRemoveAdmin(admin: Admin) {
+    setRemoveTarget(admin);
+    setRemoveError("");
+  }
+
   async function removeAdmin(discordId: string) {
-    if (!confirm("Remove this admin?")) return;
-    await fetch("/api/admin/admins", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ discordId }),
-    });
-    load();
+    setRemoveLoading(true);
+    setRemoveError("");
+    try {
+      const res = await fetch("/api/admin/admins", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discordId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Unable to remove admin.");
+      }
+      await load();
+      setRemoveTarget(null);
+    } catch (err: any) {
+      setRemoveError(err.message || "Unable to remove admin.");
+    } finally {
+      setRemoveLoading(false);
+    }
   }
 
   if (loading) return <p className="text-sm text-ink2">Loading…</p>;
 
   return (
+      <ConfirmDialog
+        open={Boolean(removeTarget)}
+        title="Remove admin?"
+        message={
+          <>
+            <strong className="font-medium text-ink">{removeTarget?.username}</strong> will lose admin access.
+            {removeError && (
+              <div className="mt-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
+                {removeError}
+              </div>
+            )}
+          </>
+        }
+        confirmLabel="Remove"
+        variant="danger"
+        loading={removeLoading}
+        onCancel={() => { if (!removeLoading) { setRemoveTarget(null); setRemoveError(""); } }}
+        onConfirm={() => removeTarget ? removeAdmin(removeTarget.discordId) : undefined}
+      />
     <div className="max-w-3xl space-y-5">
       <div className="premium-card p-6">
         <p className="font-display text-sm text-ink">Owner</p>
@@ -577,7 +653,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
                 <span className="text-ink2">— {a.discordId}</span>
               </span>
               <button
-                onClick={() => removeAdmin(a.discordId)}
+                onClick={() => requestRemoveAdmin(a)}
                 className="shrink-0 rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
               >
                 Remove
