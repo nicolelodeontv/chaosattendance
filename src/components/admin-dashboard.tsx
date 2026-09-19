@@ -181,10 +181,10 @@ function SubmissionsTab() {
           )}
           {filtered.map((r) => (
             <tr key={r.id} className="border-b border-line last:border-0">
-              <td className="truncate px-2.5 py-3 font-display text-xs text-cyan sm:px-3">{r.opId}</td>
+              <td className="truncate px-2.5 py-3 font-display text-xs text-cyan sm:px-3" title={r.opId}>{r.opId}</td>
               <td className="px-2.5 py-3 text-ink sm:px-3">
                 <div className="min-w-0 truncate">
-                  <button type="button" onClick={() => setSelected(r)} className="max-w-full truncate rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+                  <button type="button" title={r.ign} onClick={() => setSelected(r)} className="max-w-full truncate rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
                   {r.isAdmin && (
@@ -194,11 +194,14 @@ function SubmissionsTab() {
                   )}
                 </div>
               </td>
-              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3">{r.discordUsername}</td>
+              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3" title={r.discordUsername}>{r.discordUsername}</td>
               <td className="whitespace-nowrap px-2.5 py-3 sm:px-3">
                 <Badge ok={r.attending} yes="Attending" no="Not Attending" />
               </td>
-              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3">
+              <td
+                className="truncate px-2.5 py-3 text-ink2 sm:px-3"
+                title={r.hasPilot ? `Have Pilot — ${r.pilotName ?? ""}` : "No Pilot"}
+              >
                 {r.hasPilot
                   ? "Have Pilot — " + (r.pilotName ?? "")
                   : "No Pilot"}
@@ -326,7 +329,7 @@ function SubmissionDetailModal({
               </div></fieldset>
               {hasPilot && <div className="space-y-2"><label className="text-sm font-medium text-ink">Pilot Name</label><input type="text" required value={pilotName} onChange={(e) => setPilotName(e.target.value)} /></div>}
               <div className="space-y-2"><label className="text-sm font-medium text-ink">Hours</label><input type="number" step="0.5" min="0" required value={hours} onChange={(e) => setHours(e.target.value)} /></div>
-              <div className="space-y-2"><label className="text-sm font-medium text-ink">Notes <span className="font-normal text-ink2">(optional)</span></label><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+              <div className="space-y-2"><label className="text-sm font-medium text-ink">Notes <span className="font-normal text-ink2">(optional)</span></label><textarea rows={3} value={notes} onChange={(e) => { setNotes(e.target.value); e.currentTarget.style.height = "auto"; e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`; }} style={{ resize: "none", overflow: "hidden" }} /></div>
               {error && <div className="rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">{error}</div>}
               <div className="flex gap-2"><button type="button" onClick={onClose} className="premium-button-secondary flex-1">Cancel</button><button type="button" onClick={save} disabled={saving} className="premium-button flex-1 disabled:cursor-not-allowed disabled:opacity-50">{saving ? "Saving…" : "Save"}</button></div>
             </div>
