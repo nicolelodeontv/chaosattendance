@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/admin";
+import { getRole, isAdmin } from "@/lib/admin";
 import { notifyDiscord } from "@/lib/discord";
 
 export async function POST(req: Request) {
@@ -164,15 +164,16 @@ export async function GET() {
     prisma.adminUser.findMany({ select: { discordId: true } }),
   ]);
 
-  const adminIds = new Set([
-    ...admins.map((admin) => admin.discordId),
-    ...(process.env.OWNER_DISCORD_ID ? [process.env.OWNER_DISCORD_ID] : []),
-  ]);
+  const adminIds = new Set(admins.map((admin) => admin.discordId.trim()));
+
+  const submissionsWithRoles = await Promise.all(
+    submissions.map(async (submission) => ({
+      ...submission,
+      role: await getRole(submission.discordId, adminIds),
+    }))
+  );
 
   return NextResponse.json({
-    submissions: submissions.map((submission) => ({
-      ...submission,
-      isAdmin: adminIds.has(submission.discordId),
-    })),
+    submissions: submissionsWithRoles,
   });
 }
