@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ToastContainer, type ToastItem } from "@/components/toast";
 
 type Submission = {
   id: string;
@@ -56,16 +57,10 @@ function SubmissionsTab() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
   const [editingRow, setEditingRow] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 2500);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   async function load() {
     setLoading(true);
@@ -78,6 +73,17 @@ function SubmissionsTab() {
   useEffect(() => {
     load();
   }, []);
+
+  function showToast(message: string) {
+    setToasts((current) => [
+      ...current,
+      { id: window.crypto.randomUUID(), message },
+    ]);
+  }
+
+  function dismissToast(id: string) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
 
   function requestDelete(row: Submission) {
     setDeleteTarget(row);
@@ -95,7 +101,7 @@ function SubmissionsTab() {
       }
       await load();
       setDeleteTarget(null);
-      setToast("Submission deleted");
+      showToast("Submission deleted");
     } catch (err: any) {
       setDeleteError(err.message || "Unable to delete submission.");
     } finally {
@@ -251,9 +257,7 @@ function SubmissionsTab() {
           ))}
         </tbody>
       </table></div>
-      {toast && (
-        <div className="fixed right-4 top-4 z-[60] rounded-md border border-cyan/30 bg-panel px-4 py-3 text-sm text-cyan shadow-xl" role="status" aria-live="polite">{toast}</div>
-      )}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete submission?"
@@ -282,7 +286,7 @@ function SubmissionsTab() {
             setRows((current) => current.map((row) => row.id === updated.id ? updated : row));
             setSelected(updated);
             setEditingRow(false);
-            setToast(`Attendance updated for ${updated.ign}`);
+            showToast(`Attendance updated for ${updated.ign}`);
           }}
         />
       ) : null}
