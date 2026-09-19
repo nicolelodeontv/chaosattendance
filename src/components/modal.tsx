@@ -14,6 +14,8 @@ type BaseModalProps = {
   footer?: ReactNode;
   initialFocusRef?: RefObject<HTMLElement | null>;
   role?: "dialog" | "alertdialog";
+  closeOnEscape?: boolean;
+  closeOnBackdrop?: boolean;
 };
 
 export function BaseModal({
@@ -27,14 +29,20 @@ export function BaseModal({
   footer,
   initialFocusRef,
   role = "dialog",
+  closeOnEscape = true,
+  closeOnBackdrop = true,
 }: BaseModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const closeOnEscapeRef = useRef(closeOnEscape);
+  const closeOnBackdropRef = useRef(closeOnBackdrop);
 
   useEffect(() => {
     onCloseRef.current = onClose;
-  }, [onClose]);
+    closeOnEscapeRef.current = closeOnEscape;
+    closeOnBackdropRef.current = closeOnBackdrop;
+  }, [closeOnBackdrop, closeOnEscape, onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -59,6 +67,7 @@ export function BaseModal({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        if (!closeOnEscapeRef.current) return;
         event.preventDefault();
         onCloseRef.current();
         return;
@@ -107,7 +116,9 @@ export function BaseModal({
     <div
       className="confirm-dialog-backdrop fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onCloseRef.current();
+        if (event.target === event.currentTarget && closeOnBackdropRef.current) {
+          onCloseRef.current();
+        }
       }}
     >
       <div
