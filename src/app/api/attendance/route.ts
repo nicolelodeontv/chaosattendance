@@ -19,7 +19,9 @@ function alreadySubmittedResponse() {
 export async function POST(req: Request) {
   const session = await auth();
   const user = session?.user as any;
-  if (!user?.discordId) {
+  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+
+  if (!discordId) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
@@ -49,33 +51,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Hours must be a valid number" }, { status: 400 });
   }
 
-  const admin = await isAdmin(user.discordId);
+  const normalizedIgn = ign.trim();
+  const existing = await prisma.submission.findFirst({
+    where: { opId, discordId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
 
-  let submission;
-  if (admin) {
-    submission = await prisma.submission.upsert({
-      where: {
-        opId_discordId: {
-          opId,
-          discordId: user.discordId,
-        },
-      },
-      create: {
-        opId,
-        discordId: user.discordId,
+  const conflictingSubmission = await prisma.submission.findFirst({
+    where: {
+      opId,
+      ...(existing ? { id: { not: existing.id } } : {}),
+    },
+    select: { id: true, ign: true },
+  });
+
+  if (
+    conflictingSubmission &&
+    conflictingSubmission.ign.trim().toLowerCase() === normalizedIgn.toLowerCase()
+  ) {
+    return NextResponse.json(
+      { error: "That IGN is already used by another submission." },
+      { status: 409 }
+    );
+  }
+
+  if (existing) {
+    const submission = await prisma.submission.update({
+      where: { id: existing.id },
+      data: {
         discordUsername: user.username ?? "Unknown",
         discordAvatar: user.avatar ?? null,
-        ign: ign.trim(),
-        attending,
-        hasPilot,
-        pilotName: hasPilot ? pilotName.trim() : null,
-        hours: hoursNum,
-        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
-      },
-      update: {
-        discordUsername: user.username ?? "Unknown",
-        discordAvatar: user.avatar ?? null,
-        ign: ign.trim(),
+        ign: normalizedIgn,
         attending,
         hasPilot,
         pilotName: hasPilot ? pilotName.trim() : null,
@@ -84,51 +91,68 @@ export async function POST(req: Request) {
         createdAt: new Date(),
       },
     });
-  } else {
-    const existing = await prisma.submission.findFirst({
-      where: { opId, discordId: user.discordId },
-      select: { id: true },
-    });
-    if (existing) return alreadySubmittedResponse();
 
-    try {
-      submission = await prisma.submission.create({
-        data: {
-          opId,
-          discordId: user.discordId,
-          discordUsername: user.username ?? "Unknown",
-          discordAvatar: user.avatar ?? null,
-          ign: ign.trim(),
-          attending,
-          hasPilot,
-          pilotName: hasPilot ? pilotName.trim() : null,
-          hours: hoursNum,
-          notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
-        },
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        return alreadySubmittedResponse();
-      }
-      throw error;
-    }
+    await notifyDiscord({
+      opId,
+      discordUsername: user.username ?? "Unknown",
+      ign: submission.ign,
+      attending: submission.attending,
+      hasPilot: submission.hasPilot,
+      pilotName: submission.pilotName,
+      hours: submission.hours,
+      notes: submission.notes,
+    });
+
+    return NextResponse.json({ ok: true, id: submission.id, created: false });
   }
 
-  await notifyDiscord({
-    opId,
-    discordUsername: user.username ?? "Unknown",
-    ign: submission.ign,
-    attending: submission.attending,
-    hasPilot: submission.hasPilot,
-    pilotName: submission.pilotName,
-    hours: submission.hours,
-    notes: submission.notes,
-  });
+  try {
+    const submission = await prisma.submission.create({
+      data: {
+        opId,
+        discordId,
+        discordUsername: user.username ?? "Unknown",
+        discordAvatar: user.avatar ?? null,
+        ign: normalizedIgn,
+        attending,
+        hasPilot,
+        pilotName: hasPilot ? pilotName.trim() : null,
+        hours: hoursNum,
+        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+      },
+    });
 
-  return NextResponse.json({ ok: true, id: submission.id });
+    await notifyDiscord({
+      opId,
+      discordUsername: user.username ?? "Unknown",
+      ign: submission.ign,
+      attending: submission.attending,
+      hasPilot: submission.hasPilot,
+      pilotName: submission.pilotName,
+      hours: submission.hours,
+      notes: submission.notes,
+    });
+
+    return NextResponse.json({ ok: true, id: submission.id, created: true });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const ownSubmission = await prisma.submission.findFirst({
+        where: { opId, discordId },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+
+      if (ownSubmission) {
+        return NextResponse.json({
+          error: "Your submission already exists. Refresh the form and try again.",
+        }, { status: 409 });
+      }
+    }
+    throw error;
+  }
 }
 
 export async function GET() {
