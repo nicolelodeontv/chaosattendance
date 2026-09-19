@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
 
 type Submission = {
@@ -282,11 +283,11 @@ function SubmissionsTab() {
           editing={editingRow}
           onClose={() => { setSelected(null); setEditingRow(false); }}
           onEdit={() => setEditingRow(true)}
-          onSaved={(updated) => {
+          onSaved={async (updated) => {
             setRows((current) => current.map((row) => row.id === updated.id ? updated : row));
             setSelected(updated);
             setEditingRow(false);
-            showToast(`Attendance updated for ${updated.ign}`);
+            await load();
           }}
         />
       ) : null}
@@ -305,10 +306,12 @@ function SubmissionDetailModal({
   editing: boolean;
   onClose: () => void;
   onEdit: () => void;
-  onSaved: (submission: Submission) => void;
+  onSaved: (submission: Submission) => void | Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [pendingSaved, setPendingSaved] = useState<Submission | null>(null);
   const [ign, setIgn] = useState(selected.ign);
   const [attending, setAttending] = useState(selected.attending);
   const [hasPilot, setHasPilot] = useState(selected.hasPilot);
@@ -337,7 +340,8 @@ function SubmissionDetailModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Unable to update submission.");
-      onSaved(data.submission);
+      setPendingSaved(data.submission);
+      setSuccessOpen(true);
     } catch (err: any) {
       setError(err.message || "Unable to update submission.");
     } finally {
@@ -345,8 +349,28 @@ function SubmissionDetailModal({
     }
   }
 
+  function closeSuccess() {
+    setSuccessOpen(false);
+    if (!pendingSaved) return;
+    const savedSubmission = pendingSaved;
+    setPendingSaved(null);
+    void onSaved(savedSubmission);
+  }
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submission-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <>
+      <SuccessDialog
+        open={successOpen}
+        title="Submission updated"
+        message={
+          <>
+            <strong className="font-medium text-ink">{pendingSaved?.ign ?? selected.ign}</strong>'s response has been saved.
+          </>
+        }
+        onClose={closeSuccess}
+      />
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submission-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
         {editing ? (
           <>
@@ -381,7 +405,8 @@ function SubmissionDetailModal({
           </>
         )}
       </div>
-    </div>,
+    </div>
+    </>,
     document.body
   );
 }
