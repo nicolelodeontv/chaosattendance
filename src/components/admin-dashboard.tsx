@@ -15,6 +15,7 @@ type Submission = {
   hours: number;
   notes: string | null;
   createdAt: string;
+  isAdmin?: boolean;
 };
 
 type Admin = { discordId: string; username: string; createdAt: string };
@@ -200,7 +201,16 @@ function SubmissionsTab() {
             {filtered.map((r) => (
               <tr key={r.id} className="border-b border-line last:border-0">
                 <td className="px-4 py-3 font-display text-xs text-cyan">{r.opId}</td>
-                <td className="px-4 py-3 text-ink"><button type="button" onClick={() => setSelected(r)} className="rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">{r.ign}</button></td>
+                <td className="px-4 py-3 text-ink">
+                  <button type="button" onClick={() => setSelected(r)} className="rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+                    {r.ign}
+                  </button>
+                  {r.isAdmin && (
+                    <span className="ml-2 inline-flex rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-cyan">
+                      Admin
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-ink2">{r.discordUsername}</td>
                 <td className="px-4 py-3">
                   <Badge ok={r.attending} yes="Attending" no="Not Attending" />
