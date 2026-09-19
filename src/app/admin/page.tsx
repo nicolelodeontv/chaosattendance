@@ -25,7 +25,7 @@ export default async function AdminPage() {
         <h1 className="font-display text-xl text-ink">Admin console</h1>
         <p className="mt-1 text-sm text-ink2">Submissions, notifications and access control.</p>
         <div className="mt-8">
-          <AdminDashboard isOwner={isOwner(user?.discordId)} />
+          <AdminDashboard isOwner={isOwner(user)} />
         </div>
       </main>
     </div>
