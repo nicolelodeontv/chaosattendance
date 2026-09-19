@@ -24,7 +24,6 @@ export default async function Home({
         where: { opId: currentOpId, discordId },
         orderBy: { createdAt: "desc" },
         select: {
-          id: true,
           ign: true,
           attending: true,
           hasPilot: true,
