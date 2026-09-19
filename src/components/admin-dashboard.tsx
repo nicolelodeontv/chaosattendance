@@ -225,7 +225,7 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
         <div>
           <p className="font-display text-sm text-ink">Submission log</p>
-          <p className="mt-1 text-xs text-ink2">Search by op, IGN or Discord username.</p>
+          <p className="mt-1 text-xs text-ink2">Search by op, IGN, role or Discord username.</p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <input
@@ -398,7 +398,6 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
           onClose={() => { setSelected(null); setEditingRow(false); }}
           onEdit={() => setEditingRow(true)}
           onSaved={async (updated) => {
-            setRows((current) => current.map((row) => row.id === updated.id ? updated : row));
             setSelected(updated);
             setEditingRow(false);
             await load();
