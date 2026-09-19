@@ -37,7 +37,7 @@ export function ConfirmDialog({
       messageId="confirm-dialog-message"
       onClose={onCancel}
       initialFocusRef={cancelRef}
-      role="alertdialog"
+      role="dialog"
       closeOnEscape={!loading}
       closeOnBackdrop={!loading}
       footer={
