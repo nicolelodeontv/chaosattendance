@@ -490,7 +490,7 @@ export function AttendanceForm({
           )}
         </div>
 
-        <fieldset className="mb-6" aria-describedby={fieldErrors.attending ? "attending-error" : undefined}>
+        <fieldset className="mb-6" aria-invalid={Boolean(fieldErrors.attending)} aria-describedby={fieldErrors.attending ? "attending-error" : undefined}>
           <legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend>
           <div className="grid grid-cols-2 gap-2.5">
             <ToggleOption
@@ -515,7 +515,7 @@ export function AttendanceForm({
           )}
         </fieldset>
 
-        <fieldset className="mb-6" aria-describedby={fieldErrors.hasPilot ? "pilot-error" : undefined}>
+        <fieldset className="mb-6" aria-invalid={Boolean(fieldErrors.hasPilot)} aria-describedby={fieldErrors.hasPilot ? "pilot-error" : undefined}>
           <legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend>
           <div className="grid grid-cols-2 gap-2.5">
             <ToggleOption
@@ -742,15 +742,7 @@ function ReadOnlySubmissionCard({
         <SummaryItem label="Notes" value={submission.notes || "—"} fullWidth multiline />
       </div>
 
-      {canEdit ? (
-        <button
-          type="button"
-          onClick={onNewSubmission}
-          className="mt-5 text-xs text-ink2 underline underline-offset-4 transition-colors hover:text-cyan"
-        >
-          Reset local form
-        </button>
-      ) : null}
+
     </div>
   );
 }
