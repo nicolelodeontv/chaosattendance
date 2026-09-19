@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 
 type Status = "idle" | "submitting" | "locked" | "error";
 
-export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?: boolean }) {
+export function AttendanceForm({
+  alreadySubmitted = false,
+  isAdmin = false,
+}: {
+  alreadySubmitted?: boolean;
+  isAdmin?: boolean;
+}) {
   const [ign, setIgn] = useState("");
   const [attending, setAttending] = useState<"yes" | "no">("yes");
   const [hasPilot, setHasPilot] = useState<"yes" | "no">("yes");
@@ -13,9 +19,9 @@ export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?
   const [hours, setHours] = useState("");
   const [notes, setNotes] = useState("");
   const router = useRouter();
-  const [status, setStatus] = useState<Status>(alreadySubmitted ? "locked" : "idle");
+  const [status, setStatus] = useState<Status>(alreadySubmitted && !isAdmin ? "locked" : "idle");
   const [error, setError] = useState("");
-  const locked = status === "locked";
+  const locked = status === "locked" && !isAdmin;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +47,7 @@ export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 409 || data.alreadySubmitted) {
-        setStatus("locked");
+        setStatus(isAdmin ? "idle" : "locked");
         setError("");
         router.refresh();
         return;
@@ -51,7 +57,7 @@ export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?
         throw new Error(data.error || "Submission failed");
       }
 
-      setStatus("locked");
+      setStatus(isAdmin ? "idle" : "locked");
       setError("");
       router.refresh();
     } catch (err: any) {
@@ -71,7 +77,9 @@ export function AttendanceForm({ alreadySubmitted = false }: { alreadySubmitted?
           Your response
         </p>
         <p className="text-sm leading-6 text-ink2">
-          Complete the fields below. Your Discord account will be locked to this op after submission.
+          {isAdmin
+            ? "Admin mode: you can resubmit and update your existing row for this op."
+            : "Complete the fields below. Your Discord account will be locked to this op after submission."}
         </p>
       </div>
 
