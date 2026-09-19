@@ -82,6 +82,55 @@ body {
   border-radius: 999px;
 }
 
+.toast-container {
+  position: fixed;
+  right: 0;
+  bottom: 24px;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.toast-item {
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+  animation: toast-slide-up 3s ease both;
+}
+
+@keyframes toast-slide-up {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  12%,
+  82% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-container {
+    bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-item {
+    animation: none;
+  }
+}
+
 @layer components {
   .premium-card {
     border: 1px solid rgb(var(--line) / 0.9);
