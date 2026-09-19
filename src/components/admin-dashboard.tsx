@@ -45,14 +45,14 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         ))}
       </div>
 
-      {tab === "submissions" && <SubmissionsTab />}
+      {tab === "submissions" && <SubmissionsTab isOwner={isOwner} />}
       {tab === "settings" && <SettingsTab />}
       {tab === "access" && <AccessTab isOwner={isOwner} />}
     </div>
   );
 }
 
-function SubmissionsTab() {
+function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
@@ -233,14 +233,16 @@ function SubmissionsTab() {
           <button onClick={exportCsv} className="premium-button-secondary hidden shrink-0 px-3 sm:inline-flex">
             Export CSV
           </button>
-          <button
-            type="button"
-            onClick={requestBulkDelete}
-            disabled={!currentOpId || bulkCount === 0 || bulkDeleteLoading}
-            className="inline-flex min-h-[42px] max-w-full shrink-0 items-center justify-center rounded-[10px] border border-red/70 bg-red/5 px-3 text-sm font-semibold text-red transition-colors hover:border-red hover:bg-red/10 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {bulkButtonLabel}
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={requestBulkDelete}
+              disabled={!currentOpId || bulkCount === 0 || bulkDeleteLoading}
+              className="inline-flex min-h-[42px] max-w-full shrink-0 items-center justify-center rounded-[10px] border border-red/70 bg-red/5 px-3 text-sm font-semibold text-red transition-colors hover:border-red hover:bg-red/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {bulkButtonLabel}
+            </button>
+          )}
         </div>
       </div>
 
