@@ -482,7 +482,7 @@ function SettingsTab() {
   const [currentOpId, setCurrentOpId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -495,23 +495,34 @@ function SettingsTab() {
       });
   }, []);
 
+  function showToast(message: string) {
+    setToasts((current) => [
+      ...current,
+      { id: window.crypto.randomUUID(), message },
+    ]);
+  }
+
+  function dismissToast(id: string) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
+
   async function save() {
     setSaving(true);
-    setSaved(false);
-    await fetch("/api/admin/settings", {
+    const res = await fetch("/api/admin/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ webhookUrl, guildName, currentOpId }),
     });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+    if (res.ok) showToast("Settings saved");
   }
 
   if (loading) return <p className="text-sm text-ink2">Loading…</p>;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
+    <>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
       <div className="space-y-5">
         <div className="premium-card p-6">
           <p className="font-display text-sm text-ink">Operation</p>
@@ -560,7 +571,7 @@ function SettingsTab() {
             disabled={saving}
             className="premium-button mt-6 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? "Saving…" : saved ? "Saved" : "Save settings"}
+            {saving ? "Saving…" : "Save settings"}
           </button>
         </div>
       </div>
@@ -574,7 +585,8 @@ function SettingsTab() {
           Admin deletion removes the stored submission, which allows that member to submit again for the same op when a correction is needed.
         </p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -587,6 +599,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
   const [removeTarget, setRemoveTarget] = useState<Admin | null>(null);
   const [removeLoading, setRemoveLoading] = useState(false);
   const [removeError, setRemoveError] = useState("");
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   async function load() {
     const res = await fetch("/api/admin/admins");
@@ -600,16 +613,33 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
     load();
   }, []);
 
+  function showToast(message: string) {
+    setToasts((current) => [
+      ...current,
+      { id: window.crypto.randomUUID(), message },
+    ]);
+  }
+
+  function dismissToast(id: string) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
+
   async function addAdmin(e: React.FormEvent) {
     e.preventDefault();
     if (!newId.trim()) return;
-    await fetch("/api/admin/admins", {
+
+    const displayName = newName.trim() || newId.trim();
+    const res = await fetch("/api/admin/admins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ discordId: newId.trim(), username: newName.trim() }),
     });
+
     setNewId("");
     setNewName("");
+    if (res.ok) {
+      showToast(`Admin access granted to ${displayName}`);
+    }
     load();
   }
 
@@ -633,6 +663,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
       }
       await load();
       setRemoveTarget(null);
+      showToast("Admin access removed");
     } catch (err: any) {
       setRemoveError(err.message || "Unable to remove admin.");
     } finally {
@@ -644,6 +675,7 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
 
   return (
     <>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <ConfirmDialog
         open={Boolean(removeTarget)}
         title="Remove admin?"
