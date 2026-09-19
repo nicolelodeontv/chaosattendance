@@ -342,6 +342,7 @@ function SubmissionDetailModal({
       if (!res.ok) throw new Error(data.error || "Unable to update submission.");
       setPendingSaved(data.submission);
       setSuccessOpen(true);
+      void onSaved(data.submission);
     } catch (err: any) {
       setError(err.message || "Unable to update submission.");
     } finally {
@@ -351,10 +352,7 @@ function SubmissionDetailModal({
 
   function closeSuccess() {
     setSuccessOpen(false);
-    if (!pendingSaved) return;
-    const savedSubmission = pendingSaved;
     setPendingSaved(null);
-    void onSaved(savedSubmission);
   }
 
   return createPortal(
