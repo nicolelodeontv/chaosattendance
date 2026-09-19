@@ -201,28 +201,6 @@ export function AttendanceForm({
     clearFailure();
   }
 
-  function resetForNewSubmission() {
-    setSubmission(null);
-    setShowForm(true);
-    setIgn("");
-    setAttending("");
-    setHasPilot("");
-    setPilotName("");
-    setHours("");
-    setNotes("");
-    setTouched({
-      ign: false,
-      attending: false,
-      hasPilot: false,
-      pilotName: false,
-      hours: false,
-    });
-    setFieldErrors({});
-    setFailureKind(null);
-    setError("");
-    setStatus("idle");
-  }
-
   function editExistingSubmission() {
     if (!submission || !canEdit) return;
     setIgn(submission.ign);
