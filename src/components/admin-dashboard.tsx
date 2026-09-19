@@ -142,81 +142,81 @@ function SubmissionsTab() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[920px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
-              <th className="px-4 py-3 font-medium">Op</th>
-              <th className="px-4 py-3 font-medium">IGN</th>
-              <th className="px-4 py-3 font-medium">Discord</th>
-              <th className="px-4 py-3 font-medium">Attendance</th>
-              <th className="px-4 py-3 font-medium">Pilot</th>
-              <th className="px-4 py-3 font-medium">Hours</th>
-              <th className="px-4 py-3 font-medium">Notes</th>
-              <th className="px-4 py-3 font-medium">Submitted</th>
-              <th className="px-4 py-3 font-medium" />
+      <table className="w-full table-fixed text-left text-sm">
+        <thead>
+          <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
+            <th className="w-[9%] px-2.5 py-3 font-medium sm:px-3">Op</th>
+            <th className="w-[15%] px-2.5 py-3 font-medium sm:px-3">IGN</th>
+            <th className="w-[15%] px-2.5 py-3 font-medium sm:px-3">Discord</th>
+            <th className="w-[13%] px-2.5 py-3 font-medium sm:px-3">Attendance</th>
+            <th className="w-[13%] px-2.5 py-3 font-medium sm:px-3">Pilot</th>
+            <th className="w-[7%] px-2.5 py-3 font-medium sm:px-3">Hours</th>
+            <th className="w-[11%] px-2.5 py-3 font-medium sm:px-3">Notes</th>
+            <th className="w-[11%] px-2.5 py-3 font-medium sm:px-3">Submitted</th>
+            <th className="w-[6%] px-2.5 py-3 font-medium sm:px-3" />
+          </tr>
+        </thead>
+        <tbody>
+          {loading && (
+            <tr>
+              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+                Loading…
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-ink2">
-                  Loading…
-                </td>
-              </tr>
-            )}
-            {!loading && filtered.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-ink2">
-                  No submissions found.
-                </td>
-              </tr>
-            )}
-            {filtered.map((r) => (
-              <tr key={r.id} className="border-b border-line last:border-0">
-                <td className="px-4 py-3 font-display text-xs text-cyan">{r.opId}</td>
-                <td className="px-4 py-3 text-ink">
-                  <button type="button" onClick={() => setSelected(r)} className="rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+          )}
+          {!loading && filtered.length === 0 && (
+            <tr>
+              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+                No submissions found.
+              </td>
+            </tr>
+          )}
+          {filtered.map((r) => (
+            <tr key={r.id} className="border-b border-line last:border-0">
+              <td className="truncate px-2.5 py-3 font-display text-xs text-cyan sm:px-3">{r.opId}</td>
+              <td className="px-2.5 py-3 text-ink sm:px-3">
+                <div className="min-w-0 truncate">
+                  <button type="button" onClick={() => setSelected(r)} className="max-w-full truncate rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
                   {r.isAdmin && (
-                    <span className="ml-2 inline-flex rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-cyan">
+                    <span className="ml-1.5 inline-flex rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-cyan">
                       Admin
                     </span>
                   )}
-                </td>
-                <td className="px-4 py-3 text-ink2">{r.discordUsername}</td>
-                <td className="px-4 py-3">
-                  <Badge ok={r.attending} yes="Attending" no="Not Attending" />
-                </td>
-                <td className="px-4 py-3 text-ink2">
-                  {r.hasPilot
-                    ? "Have Pilot — " + (r.pilotName ?? "")
-                    : "No Pilot"}
-                </td>
-                <td className="px-4 py-3 text-ink2">{r.hours}</td>
-                <td className="max-w-[16rem] truncate px-4 py-3 text-ink2">
-                  {r.notes ?? "—"}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3 text-ink2">
-                  {new Date(r.createdAt).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => remove(r.id)}
-                    className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
-                    aria-label="Delete submission"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </td>
+              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3">{r.discordUsername}</td>
+              <td className="whitespace-nowrap px-2.5 py-3 sm:px-3">
+                <Badge ok={r.attending} yes="Attending" no="Not Attending" />
+              </td>
+              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3">
+                {r.hasPilot
+                  ? "Have Pilot — " + (r.pilotName ?? "")
+                  : "No Pilot"}
+              </td>
+              <td className="whitespace-nowrap px-2.5 py-3 text-ink2 sm:px-3">{r.hours}</td>
+              <td className="truncate px-2.5 py-3 text-ink2 sm:px-3" title={r.notes ?? undefined}>
+                {r.notes ?? "—"}
+              </td>
+              <td className="whitespace-nowrap px-2.5 py-3 text-ink2 sm:px-3">
+                {new Date(r.createdAt).toLocaleDateString()}
+              </td>
+              <td className="px-2.5 py-3 text-right sm:px-3">
+                <button
+                  onClick={() => remove(r.id)}
+                  className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
+                  aria-label="Delete submission"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M8 6V4a1 1 0 0 1 1 1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       {selected ? <SubmissionDetailModal selected={selected} onClose={() => setSelected(null)} /> : null}
     </div>
   );
