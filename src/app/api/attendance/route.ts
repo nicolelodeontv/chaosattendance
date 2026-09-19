@@ -49,16 +49,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Hours must be a valid number" }, { status: 400 });
   }
 
-  const existing = await prisma.submission.findFirst({
-    where: { opId, discordId: user.discordId },
-    select: { id: true },
-  });
-  if (existing) return alreadySubmittedResponse();
+  const admin = await isAdmin(user.discordId);
 
   let submission;
-  try {
-    submission = await prisma.submission.create({
-      data: {
+  if (admin) {
+    submission = await prisma.submission.upsert({
+      where: {
+        opId_discordId: {
+          opId,
+          discordId: user.discordId,
+        },
+      },
+      create: {
         opId,
         discordId: user.discordId,
         discordUsername: user.username ?? "Unknown",
@@ -70,15 +72,49 @@ export async function POST(req: Request) {
         hours: hoursNum,
         notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
       },
+      update: {
+        discordUsername: user.username ?? "Unknown",
+        discordAvatar: user.avatar ?? null,
+        ign: ign.trim(),
+        attending,
+        hasPilot,
+        pilotName: hasPilot ? pilotName.trim() : null,
+        hours: hoursNum,
+        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+        createdAt: new Date(),
+      },
     });
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return alreadySubmittedResponse();
+  } else {
+    const existing = await prisma.submission.findFirst({
+      where: { opId, discordId: user.discordId },
+      select: { id: true },
+    });
+    if (existing) return alreadySubmittedResponse();
+
+    try {
+      submission = await prisma.submission.create({
+        data: {
+          opId,
+          discordId: user.discordId,
+          discordUsername: user.username ?? "Unknown",
+          discordAvatar: user.avatar ?? null,
+          ign: ign.trim(),
+          attending,
+          hasPilot,
+          pilotName: hasPilot ? pilotName.trim() : null,
+          hours: hoursNum,
+          notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return alreadySubmittedResponse();
+      }
+      throw error;
     }
-    throw error;
   }
 
   await notifyDiscord({
