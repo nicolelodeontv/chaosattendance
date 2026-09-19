@@ -91,7 +91,7 @@ function SubmissionsTab() {
   }, [selected]);
 
   async function remove(id: string) {
-    if (!confirm("Delete this submission?")) return;
+    if (!confirm(`Delete this submission? ${rows.find((row) => row.id === id)?.ign ?? "This member"} will be able to submit again.`)) return;
     await fetch("/api/attendance/" + id, { method: "DELETE" });
     setRows((r) => r.filter((row) => row.id !== id));
   }
