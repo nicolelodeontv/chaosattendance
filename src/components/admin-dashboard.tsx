@@ -27,17 +27,19 @@ type Tab = "submissions" | "settings" | "access";
 
 export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   const [tab, setTab] = useState<Tab>("submissions");
+  const visibleTab: Tab = isOwner ? tab : "submissions";
+  const tabs: Tab[] = isOwner ? ["submissions", "settings", "access"] : ["submissions"];
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-line bg-panel/70 p-1">
-        {(["submissions", "settings", "access"] as Tab[]).map((t) => (
+        {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={[
               "rounded-lg px-3 py-2 text-sm capitalize transition-colors",
-              tab === t ? "bg-cyan/10 text-cyan" : "text-ink2 hover:bg-panel2 hover:text-ink",
+              visibleTab === t ? "bg-cyan/10 text-cyan" : "text-ink2 hover:bg-panel2 hover:text-ink",
             ].join(" ")}
           >
             {t}
@@ -45,9 +47,9 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         ))}
       </div>
 
-      {tab === "submissions" && <SubmissionsTab isOwner={isOwner} />}
-      {tab === "settings" && <SettingsTab />}
-      {tab === "access" && <AccessTab isOwner={isOwner} />}
+      {visibleTab === "submissions" && <SubmissionsTab isOwner={isOwner} />}
+      {visibleTab === "settings" && isOwner && <SettingsTab />}
+      {visibleTab === "access" && isOwner && <AccessTab isOwner={isOwner} />}
     </div>
   );
 }
@@ -78,11 +80,12 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
 
   useEffect(() => {
     load();
+    if (!isOwner) return;
     fetch("/api/admin/settings")
       .then((res) => res.json())
       .then((data) => setCurrentOpId(data.settings?.currentOpId?.trim() || "current"))
       .catch(() => setCurrentOpId("current"));
-  }, []);
+  }, [isOwner]);
 
   function showToast(message: string) {
     setToasts((current) => [
@@ -127,7 +130,7 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
 
   async function removeBulk() {
     const hasFilter = filter.trim().length > 0;
-    const targets = hasFilter ? currentOpRows : currentOpRows;
+    const targets = currentOpRows;
     if (!currentOpId || targets.length === 0 || bulkConfirmText !== "DELETE") return;
 
     setBulkDeleteLoading(true);
