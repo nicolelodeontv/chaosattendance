@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   if (!(await isAdmin(user?.discordId))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const discordId = new URL(req.url).searchParams.get("discordId")?.trim();
-  if (!discordId || !/^d{17,20}$/.test(discordId)) {
+  if (!discordId || !/^\d{17,20}$/.test(discordId)) {
     return NextResponse.json({ error: "Invalid Discord user ID" }, { status: 400 });
   }
 
