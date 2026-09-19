@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isOwner } from "@/lib/admin";
+import { getRole, isOwner } from "@/lib/admin";
 
 export async function GET() {
   const session = await auth();
@@ -14,7 +14,17 @@ export async function GET() {
   }
 
   const admins = await prisma.adminUser.findMany({ orderBy: { createdAt: "asc" } });
-  return NextResponse.json({ admins, ownerDiscordId: process.env.OWNER_DISCORD_ID ?? null });
+  const adminIds = new Set(admins.map((admin) => admin.discordId.trim()));
+  const adminsWithRoles = await Promise.all(
+    admins.map(async (admin) => ({
+      ...admin,
+      role: await getRole(admin.discordId, adminIds),
+    }))
+  );
+  return NextResponse.json({
+    admins: adminsWithRoles,
+    ownerRole: "owner",
+  });
 }
 
 export async function POST(req: Request) {
@@ -58,7 +68,7 @@ export async function DELETE(req: Request) {
   if (!discordId) {
     return NextResponse.json({ error: "Discord ID is required" }, { status: 400 });
   }
-  if (discordId === process.env.OWNER_DISCORD_ID) {
+  if (isOwner({ discordId })) {
     return NextResponse.json({ error: "Cannot remove the owner" }, { status: 400 });
   }
 

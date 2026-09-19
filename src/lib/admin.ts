@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import type { UserRole } from "@/types/roles";
 
 type OwnerUser = {
   discordId?: string | null;
@@ -28,4 +29,20 @@ export function isOwner(user: OwnerUser | null | undefined): boolean {
   const ownerId = normalizeOwnerId(process.env.OWNER_DISCORD_ID);
   const discordId = user?.discordId?.trim() ?? "";
   return Boolean(ownerId && discordId && discordId === ownerId);
+}
+
+export async function getRole(
+  discordId: string | undefined | null,
+  adminDiscordIds?: ReadonlySet<string>
+): Promise<UserRole> {
+  const normalizedDiscordId = discordId?.trim() ?? "";
+  if (!normalizedDiscordId) return "member";
+
+  if (isOwner({ discordId: normalizedDiscordId })) return "owner";
+
+  const ids = adminDiscordIds ?? new Set(
+    (await prisma.adminUser.findMany({ select: { discordId: true } })).map((admin) => admin.discordId.trim())
+  );
+
+  return ids.has(normalizedDiscordId) ? "admin" : "member";
 }

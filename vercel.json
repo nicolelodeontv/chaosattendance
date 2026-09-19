@@ -1,5 +1,6 @@
 {
   "git": {
     "deploymentEnabled": true
-  }
+  },
+  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then prisma db execute --file prisma/migrations/20260919110000_submission_identity_constraints/migration.sql; fi && npm run build"
 }
