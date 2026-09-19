@@ -21,7 +21,14 @@ export function AttendanceForm({
   const router = useRouter();
   const [status, setStatus] = useState<Status>(alreadySubmitted && !isAdmin ? "locked" : "idle");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const locked = status === "locked" && !isAdmin;
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => setSuccess(""), 2500);
+    return () => window.clearTimeout(timer);
+  }, [success]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +36,7 @@ export function AttendanceForm({
 
     setStatus("submitting");
     setError("");
+    setSuccess("");
 
     try {
       const res = await fetch("/api/attendance", {
@@ -47,9 +55,14 @@ export function AttendanceForm({
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 409 || data.alreadySubmitted) {
-        setStatus(isAdmin ? "idle" : "locked");
-        setError("");
-        router.refresh();
+        if (isAdmin) {
+          setStatus("error");
+          setError(data.error || "Attendance could not be updated.");
+        } else {
+          setStatus("locked");
+          setError("");
+          router.refresh();
+        }
         return;
       }
 
@@ -59,6 +72,9 @@ export function AttendanceForm({
 
       setStatus(isAdmin ? "idle" : "locked");
       setError("");
+      if (isAdmin) {
+        setSuccess(`Attendance updated for ${ign.trim()}`);
+      }
       router.refresh();
     } catch (err: any) {
       setError(err.message || "Something went wrong");
@@ -82,6 +98,16 @@ export function AttendanceForm({
             : "Complete the fields below. Your Discord account will be locked to this op after submission."}
         </p>
       </div>
+
+      {success && (
+        <div
+          className="mb-4 rounded-md border border-cyan/30 bg-cyan/10 px-3 py-2.5 text-sm text-cyan"
+          role="status"
+          aria-live="polite"
+        >
+          {success}
+        </div>
+      )}
 
       <div className="mb-6 space-y-2">
         <label htmlFor="ign" className="text-sm font-medium text-ink">
@@ -179,7 +205,11 @@ export function AttendanceForm({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red">
+        <div
+          className="mb-4 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red"
+          role="alert"
+          aria-live="assertive"
+        >
           {error}
         </div>
       )}
