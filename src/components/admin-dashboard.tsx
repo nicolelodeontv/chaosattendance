@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
+import { RoleBadge } from "@/components/role-badge";
+import { ROLE_LABELS, type UserRole } from "@/types/roles";
 
 type Submission = {
   id: string;
@@ -18,10 +20,10 @@ type Submission = {
   hours: number;
   notes: string | null;
   createdAt: string;
-  isAdmin?: boolean;
+  role: UserRole;
 };
 
-type Admin = { discordId: string; username: string; createdAt: string };
+type Admin = { discordId: string; username: string; createdAt: string; role: UserRole };
 
 type Tab = "submissions" | "settings" | "access";
 
@@ -166,6 +168,7 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
     const header = [
       "Op",
       "IGN",
+      "Role",
       "Discord",
       "Attendance",
       "Pilot",
@@ -178,6 +181,7 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
       [
         r.opId,
         r.ign,
+        ROLE_LABELS[r.role].charAt(0) + ROLE_LABELS[r.role].slice(1).toLowerCase(),
         r.discordUsername,
         r.attending ? "Attending" : "Not Attending",
         r.hasPilot ? "Have Pilot" : "No Pilot",
@@ -204,6 +208,7 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
     return (
       r.opId.toLowerCase().includes(query) ||
       r.ign.toLowerCase().includes(query) ||
+      ROLE_LABELS[r.role].toLowerCase().includes(query) ||
       r.discordUsername.toLowerCase().includes(query)
     );
   });
@@ -254,6 +259,7 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
           <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
             <th className="px-2.5 py-3 font-medium sm:px-3">Op</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">IGN</th>
+            <th className="px-2.5 py-3 font-medium sm:px-3">Role</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">Discord</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">Attendance</th>
             <th className="px-2.5 py-3 font-medium sm:px-3">Pilot</th>
@@ -266,14 +272,14 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
         <tbody>
           {loading && (
             <tr>
-              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+              <td colSpan={9 className="px-4 py-10 text-center text-ink2">
                 Loading…
               </td>
             </tr>
           )}
           {!loading && filtered.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+              <td colSpan={10} className="px-4 py-10 text-center text-ink2">
                 No submissions found.
               </td>
             </tr>
@@ -281,16 +287,12 @@ function SubmissionsTab({ isOwner }: { isOwner: boolean }) {
           {filtered.map((r) => (
             <tr key={r.id} className="border-b border-line last:border-0">
               <td className="px-2.5 py-3 font-display text-xs text-cyan sm:px-3 whitespace-nowrap">{r.opId}</td>
-              <td className="px-2.5 py-3 text-ink sm:px-3 whitespace-nowrap">
-                <div className="min-w-0">
-                  <button type="button" onClick={() => setSelected(r)} className="rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+              <td className="px-2.5 py-3 text-ink sm:px-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <button type="button" onClick={() => setSelected(r)} className="min-w-0 max-w-full break-words rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
-                  {r.isAdmin && (
-                    <span className="ml-1.5 inline-flex rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-cyan">
-                      Admin
-                    </span>
-                  )}
+                  <RoleBadge role={r.role} />
                 </div>
               </td>
               <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">{r.discordUsername}</td>
@@ -702,7 +704,6 @@ function SettingsTab() {
 
 function AccessTab({ isOwner }: { isOwner: boolean }) {
   const [admins, setAdmins] = useState<Admin[]>([]);
-  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [newId, setNewId] = useState("");
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -715,7 +716,6 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
     const res = await fetch("/api/admin/admins");
     const data = await res.json();
     setAdmins(data.admins ?? []);
-    setOwnerId(data.ownerDiscordId ?? null);
     setLoading(false);
   }
 
@@ -807,10 +807,12 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
       />
     <div className="max-w-3xl space-y-5">
       <div className="premium-card p-6">
-        <p className="font-display text-sm text-ink">Owner</p>
+        <div className="flex items-center gap-2">
+          <p className="font-display text-sm text-ink">Owner</p>
+          <RoleBadge role="owner" />
+        </div>
         <p className="mt-1 text-sm leading-6 text-ink2">
-          {ownerId ?? "Not set"} — always has admin access, set via the OWNER_DISCORD_ID
-          environment variable.
+          Owner access is controlled by the OWNER_DISCORD_ID environment variable.
         </p>
       </div>
 
@@ -824,8 +826,11 @@ function AccessTab({ isOwner }: { isOwner: boolean }) {
               className="flex items-center justify-between gap-3 rounded-lg border border-line bg-panel2/60 px-3 py-2.5 text-sm"
             >
               <span className="min-w-0 text-ink">
-                <span className="font-medium">{a.username}</span>{" "}
-                <span className="text-ink2">— {a.discordId}</span>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{a.username}</span>
+                  <RoleBadge role={a.role} />
+                  <span className="text-ink2">— {a.discordId}</span>
+                </span>
               </span>
               <button
                 onClick={() => requestRemoveAdmin(a)}
