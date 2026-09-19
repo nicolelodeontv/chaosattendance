@@ -2,5 +2,5 @@
   "git": {
     "deploymentEnabled": true
   },
-  "buildCommand": "prisma migrate deploy && npm run build"
+  "buildCommand": "prisma db execute --file prisma/migrations/20260919110000_submission_identity_constraints/migration.sql && npm run build"
 }
