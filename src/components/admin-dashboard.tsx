@@ -968,7 +968,7 @@ function SubmissionDetailModal({
           </div>
         ) : (
           <>
-            <SubmissionDetailHeader selected={selected} onClose={onClose} />
+            <SubmissionDetailBody selected={selected} />
             <button type="button" onClick={onEdit} className="premium-button mt-5 w-full">Edit submission</button>
           </>
         )}
@@ -977,7 +977,7 @@ function SubmissionDetailModal({
   );
 }
 
-function SubmissionDetailHeader({ selected, onClose }: { selected: Submission; onClose: () => void }) {
+function SubmissionDetailBody({ selected }: { selected: Submission }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(true);
 
@@ -1001,13 +1001,6 @@ function SubmissionDetailHeader({ selected, onClose }: { selected: Submission; o
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Submission detail</p>
-          <h3 id="submission-detail-title" className="font-display text-xl text-ink">{selected.ign}</h3>
-        </div>
-        <button type="button" onClick={onClose} className="icon-button" aria-label="Close submission detail dialog">×</button>
-      </div>
       <div className="mt-5 flex flex-col items-center text-center">
         <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-line bg-panel2">
           {avatarLoading ? <div className="h-full w-full animate-pulse bg-panel2" aria-label="Loading Discord avatar" /> : <img src={avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="h-full w-full object-cover" /> }
