@@ -600,11 +600,13 @@ function SubmissionsTab({
         ) : null}
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <input
+            id="submission-filter"
             type="text"
             placeholder="Filter submissions"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="min-w-0 flex-1 sm:w-64"
+            aria-label="Filter submissions"
           />
           <button onClick={load} className="premium-button-secondary shrink-0 px-3">
             Refresh
@@ -1096,8 +1098,9 @@ function SettingsTab() {
             The current op ID is the lock scope. Changing it starts a new submission window while keeping previous ops in the admin log.
           </p>
           <div className="mt-4 space-y-2">
-            <label className="text-sm font-medium text-ink">Current op ID</label>
+            <label htmlFor="settings-current-op-id" className="text-sm font-medium text-ink">Current op ID</label>
             <input
+              id="settings-current-op-id"
               type="text"
               value={currentOpId}
               onChange={(e) => setCurrentOpId(e.target.value)}
@@ -1109,8 +1112,9 @@ function SettingsTab() {
 
         <div className="premium-card p-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-ink">Squadron / server name</label>
+            <label htmlFor="settings-guild-name" className="text-sm font-medium text-ink">Squadron / server name</label>
             <input
+              id="settings-guild-name"
               type="text"
               value={guildName}
               onChange={(e) => setGuildName(e.target.value)}
@@ -1130,6 +1134,7 @@ function SettingsTab() {
                 type="button"
                 role="switch"
                 aria-checked={notificationsEnabled}
+                aria-label="Enable Discord notifications"
                 onClick={() => setNotificationsEnabled((value) => !value)}
                 className={[
                   "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/60 motion-reduce:transition-none",
@@ -1145,8 +1150,9 @@ function SettingsTab() {
               </button>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-ink">Discord webhook URL</label>
+              <label htmlFor="settings-webhook-url" className="text-sm font-medium text-ink">Discord webhook URL</label>
               <input
+                id="settings-webhook-url"
                 type="text"
                 value={webhookUrl}
                 onChange={(e) => setWebhookUrl(e.target.value)}
@@ -1314,8 +1320,10 @@ function AccessTab() {
                 </span>
               </span>
               <button
+                type="button"
                 onClick={() => requestRemoveAdmin(a)}
                 className="shrink-0 rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
+                aria-label={`Remove admin access for ${a.username}`}
               >
                 Remove
               </button>
@@ -1325,8 +1333,9 @@ function AccessTab() {
 
         <form onSubmit={addAdmin} className="flex flex-wrap items-end gap-2">
           <div className="min-w-[10rem] flex-1 space-y-1.5">
-            <label className="text-xs text-ink2">Discord user ID</label>
+            <label htmlFor="access-discord-user-id" className="text-xs text-ink2">Discord user ID</label>
             <input
+              id="access-discord-user-id"
               type="text"
               value={newId}
               onChange={(e) => setNewId(e.target.value)}
@@ -1334,8 +1343,9 @@ function AccessTab() {
             />
           </div>
           <div className="min-w-[8rem] flex-1 space-y-1.5">
-            <label className="text-xs text-ink2">Label (optional)</label>
+            <label htmlFor="access-admin-label" className="text-xs text-ink2">Label (optional)</label>
             <input
+              id="access-admin-label"
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
