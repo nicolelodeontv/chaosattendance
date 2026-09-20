@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export type ToastItem = {
   id: string;
@@ -30,10 +30,16 @@ function Toast({
   toast: ToastItem;
   onDismiss: (id: string) => void;
 }) {
+  const onDismissRef = useRef(onDismiss);
+
   useEffect(() => {
-    const timer = window.setTimeout(() => onDismiss(toast.id), 3000);
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => onDismissRef.current(toast.id), 3000);
     return () => window.clearTimeout(timer);
-  }, [onDismiss, toast.id]);
+  }, [toast.id]);
 
   return (
     <div className="toast-item rounded-md border border-cyan/30 bg-panel px-4 py-3 text-sm text-cyan shadow-xl" role="status">

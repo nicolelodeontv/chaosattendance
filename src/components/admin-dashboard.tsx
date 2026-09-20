@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { BaseModal } from "@/components/modal";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
 import { RoleBadge } from "@/components/role-badge";
@@ -383,6 +383,7 @@ function SubmissionsTab({
 }) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
   const [editingRow, setEditingRow] = useState(false);
@@ -415,10 +416,19 @@ function SubmissionsTab({
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/attendance");
-    const data = await res.json();
-    setRows(data.submissions ?? []);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const res = await fetch("/api/attendance");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to load submissions.");
+      }
+      setRows(data.submissions ?? []);
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Unable to load submissions.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -576,13 +586,27 @@ function SubmissionsTab({
           <p className="font-display text-sm text-ink">Submission log</p>
           <p className="mt-1 text-xs text-ink2">Search by op, IGN, role or Discord username.</p>
         </div>
+        {loadError ? (
+          <div className="flex w-full items-center justify-between gap-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
+            <span>{loadError}</span>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="shrink-0 rounded-md border border-red/40 px-3 py-1.5 font-medium transition-colors hover:bg-red/10"
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <input
+            id="submission-filter"
             type="text"
             placeholder="Filter submissions"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="min-w-0 flex-1 sm:w-64"
+            aria-label="Filter submissions"
           />
           <button onClick={load} className="premium-button-secondary shrink-0 px-3">
             Refresh
@@ -779,6 +803,7 @@ function SubmissionDetailModal({
   onEdit: () => void;
   onSaved: (submission: Submission) => void | Promise<void>;
 }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [successOpen, setSuccessOpen] = useState(false);
@@ -826,7 +851,7 @@ function SubmissionDetailModal({
     setPendingSaved(null);
   }
 
-  return createPortal(
+  return (
     <>
       <SuccessDialog
         open={successOpen}
@@ -839,44 +864,116 @@ function SubmissionDetailModal({
         onClose={closeSuccess}
       />
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submission-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
+      <BaseModal
+        open={true}
+        title={selected.ign}
+        titleId="submission-detail-title"
+        onClose={onClose}
+        initialFocusRef={closeRef}
+        cardClassName="!max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto p-6 shadow-2xl sm:p-7"
+        beforeTitle={
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-cyan">
+              {editing ? "Edit submission" : "Submission detail"}
+            </p>
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              className="icon-button"
+              aria-label="Close submission detail dialog"
+            >
+              ×
+            </button>
+          </div>
+        }
+      >
         {editing ? (
-          <>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Edit submission</p>
-                <h3 id="submission-detail-title" className="font-display text-xl text-ink">{selected.ign}</h3>
-              </div>
-              <button type="button" onClick={onClose} className="icon-button" aria-label="Close submission detail dialog">×</button>
+          <div className="mt-6 space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="admin-edit-ign" className="text-sm font-medium text-ink">IGN</label>
+              <input
+                id="admin-edit-ign"
+                type="text"
+                required
+                value={ign}
+                onChange={(e) => setIgn(e.target.value)}
+              />
             </div>
-            <div className="mt-6 space-y-5">
-              <div className="space-y-2"><label className="text-sm font-medium text-ink">IGN</label><input type="text" required value={ign} onChange={(e) => setIgn(e.target.value)} /></div>
-              <fieldset><legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend><div className="grid grid-cols-2 gap-2.5">
+            <fieldset>
+              <legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend>
+              <div className="grid grid-cols-2 gap-2.5">
                 <button type="button" onClick={() => setAttending(true)} className={[`premium-toggle`, attending ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Attending</button>
                 <button type="button" onClick={() => setAttending(false)} className={[`premium-toggle`, !attending ? `border-red bg-red/10 text-red` : ` `].join(" ")}>Not Attending</button>
-              </div></fieldset>
-              <fieldset><legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend><div className="grid grid-cols-2 gap-2.5">
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend>
+              <div className="grid grid-cols-2 gap-2.5">
                 <button type="button" onClick={() => setHasPilot(true)} className={[`premium-toggle`, hasPilot ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Have Pilot</button>
                 <button type="button" onClick={() => setHasPilot(false)} className={[`premium-toggle`, !hasPilot ? `border-red bg-red/10 text-red` : ` `].join(" ")}>No Pilot</button>
-              </div></fieldset>
-              {hasPilot && <div className="space-y-2"><label className="text-sm font-medium text-ink">Pilot Name</label><input type="text" required value={pilotName} onChange={(e) => setPilotName(e.target.value)} /></div>}
-              <div className="space-y-2"><label className="text-sm font-medium text-ink">Hours</label><input type="number" step="0.5" min="0" required value={hours} onChange={(e) => setHours(e.target.value)} /></div>
-              <div className="space-y-2"><label className="text-sm font-medium text-ink">Notes <span className="font-normal text-ink2">(optional)</span></label><textarea rows={3} value={notes} onChange={(e) => { setNotes(e.target.value); e.currentTarget.style.height = "auto"; e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`; }} style={{ resize: "none", overflow: "hidden" }} /></div>
-              {error && <div className="rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">{error}</div>}
-              <div className="flex gap-2"><button type="button" onClick={onClose} className="premium-button-secondary flex-1">Cancel</button><button type="button" onClick={save} disabled={saving} className="premium-button flex-1 disabled:cursor-not-allowed disabled:opacity-50">{saving ? "Saving…" : "Save"}</button></div>
+              </div>
+            </fieldset>
+            {hasPilot && (
+              <div className="space-y-2">
+                <label htmlFor="admin-edit-pilot-name" className="text-sm font-medium text-ink">Pilot Name</label>
+                <input
+                  id="admin-edit-pilot-name"
+                  type="text"
+                  required
+                  value={pilotName}
+                  onChange={(e) => setPilotName(e.target.value)}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <label htmlFor="admin-edit-hours" className="text-sm font-medium text-ink">Hours</label>
+              <input
+                id="admin-edit-hours"
+                type="number"
+                step="0.5"
+                min="0"
+                required
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
             </div>
-          </>
+            <div className="space-y-2">
+              <label htmlFor="admin-edit-notes" className="text-sm font-medium text-ink">
+                Notes <span className="font-normal text-ink2">(optional)</span>
+              </label>
+              <textarea
+                id="admin-edit-notes"
+                rows={3}
+                value={notes}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  e.currentTarget.style.height = "auto";
+                  e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                }}
+                style={{ resize: "none", overflow: "hidden" }}
+              />
+            </div>
+            {error && (
+              <div className="rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
+                {error}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="premium-button-secondary flex-1">Cancel</button>
+              <button type="button" onClick={save} disabled={saving} className="premium-button flex-1 disabled:cursor-not-allowed disabled:opacity-50">
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             <SubmissionDetailHeader selected={selected} onClose={onClose} />
             <button type="button" onClick={onEdit} className="premium-button mt-5 w-full">Edit submission</button>
           </>
         )}
-      </div>
-    </div>
-    </>,
-    document.body
+      </BaseModal>
+    </>
   );
 }
 
@@ -1001,8 +1098,9 @@ function SettingsTab() {
             The current op ID is the lock scope. Changing it starts a new submission window while keeping previous ops in the admin log.
           </p>
           <div className="mt-4 space-y-2">
-            <label className="text-sm font-medium text-ink">Current op ID</label>
+            <label htmlFor="settings-current-op-id" className="text-sm font-medium text-ink">Current op ID</label>
             <input
+              id="settings-current-op-id"
               type="text"
               value={currentOpId}
               onChange={(e) => setCurrentOpId(e.target.value)}
@@ -1014,8 +1112,9 @@ function SettingsTab() {
 
         <div className="premium-card p-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-ink">Squadron / server name</label>
+            <label htmlFor="settings-guild-name" className="text-sm font-medium text-ink">Squadron / server name</label>
             <input
+              id="settings-guild-name"
               type="text"
               value={guildName}
               onChange={(e) => setGuildName(e.target.value)}
@@ -1035,6 +1134,7 @@ function SettingsTab() {
                 type="button"
                 role="switch"
                 aria-checked={notificationsEnabled}
+                aria-label="Enable Discord notifications"
                 onClick={() => setNotificationsEnabled((value) => !value)}
                 className={[
                   "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/60 motion-reduce:transition-none",
@@ -1050,8 +1150,9 @@ function SettingsTab() {
               </button>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-ink">Discord webhook URL</label>
+              <label htmlFor="settings-webhook-url" className="text-sm font-medium text-ink">Discord webhook URL</label>
               <input
+                id="settings-webhook-url"
                 type="text"
                 value={webhookUrl}
                 onChange={(e) => setWebhookUrl(e.target.value)}
@@ -1219,8 +1320,10 @@ function AccessTab() {
                 </span>
               </span>
               <button
+                type="button"
                 onClick={() => requestRemoveAdmin(a)}
                 className="shrink-0 rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
+                aria-label={`Remove admin access for ${a.username}`}
               >
                 Remove
               </button>
@@ -1230,8 +1333,9 @@ function AccessTab() {
 
         <form onSubmit={addAdmin} className="flex flex-wrap items-end gap-2">
           <div className="min-w-[10rem] flex-1 space-y-1.5">
-            <label className="text-xs text-ink2">Discord user ID</label>
+            <label htmlFor="access-discord-user-id" className="text-xs text-ink2">Discord user ID</label>
             <input
+              id="access-discord-user-id"
               type="text"
               value={newId}
               onChange={(e) => setNewId(e.target.value)}
@@ -1239,8 +1343,9 @@ function AccessTab() {
             />
           </div>
           <div className="min-w-[8rem] flex-1 space-y-1.5">
-            <label className="text-xs text-ink2">Label (optional)</label>
+            <label htmlFor="access-admin-label" className="text-xs text-ink2">Label (optional)</label>
             <input
+              id="access-admin-label"
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
