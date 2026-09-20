@@ -464,6 +464,7 @@ function SubmissionsTab({
   notificationsReadVersion: number;
   onSubmissionChangeEventConsumed: () => void;
   onSubmissionsDeleted: (ids: string[]) => void;
+  externalRefreshVersion: number;
 }) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -494,6 +495,11 @@ function SubmissionsTab({
       }
       const nextRows = (data.submissions ?? []) as Submission[];
       setRows(nextRows);
+      setCurrentOpId(
+        typeof data.currentOpId === "string" && data.currentOpId.trim()
+          ? data.currentOpId.trim()
+          : "current"
+      );
       if (clearNew) setNewRowIds(new Set());
       return nextRows;
     } catch (err: unknown) {
@@ -578,13 +584,8 @@ function SubmissionsTab({
   }, [notificationTarget]);
 
   useEffect(() => {
-    load();
-    if (!isOwner) return;
-    fetch("/api/admin/settings")
-      .then((res) => res.json())
-      .then((data) => setCurrentOpId(data.settings?.currentOpId?.trim() || "current"))
-      .catch(() => setCurrentOpId("current"));
-  }, [isOwner]);
+    void load();
+  }, []);
 
   function showToast(message: string) {
     setToasts((current) => [
@@ -729,14 +730,49 @@ function SubmissionsTab({
     : 0;
 
   const hasFilter = filter.trim().length > 0;
+  const currentOpAllRows = rows.filter((r) => r.opId === currentOpId);
   const currentOpRows = filtered.filter((r) => r.opId === currentOpId);
+  const currentOpStats = {
+    attending: currentOpAllRows.filter((r) => r.attending).length,
+    notAttending: currentOpAllRows.filter((r) => !r.attending).length,
+    withPilot: currentOpAllRows.filter((r) => r.hasPilot).length,
+    noPilot: currentOpAllRows.filter((r) => !r.hasPilot).length,
+    totalHours: currentOpAllRows.reduce((total, row) => total + row.hours, 0),
+    totalSubmissions: currentOpAllRows.length,
+  };
   const bulkCount = currentOpRows.length;
   const bulkButtonLabel = hasFilter
     ? `Remove filtered (${bulkCount})`
     : `Remove all (${bulkCount})`;
 
+  const statTiles = [
+    { label: "Attending", value: currentOpStats.attending },
+    { label: "Not attending", value: currentOpStats.notAttending },
+    { label: "With pilot", value: currentOpStats.withPilot },
+    { label: "No pilot", value: currentOpStats.noPilot },
+    { label: "Total hours", value: Number(currentOpStats.totalHours.toFixed(1)) },
+    { label: "Total submissions", value: currentOpStats.totalSubmissions },
+  ];
+
   return (
-    <div className="premium-card overflow-hidden">
+    <>
+      <div
+        className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3"
+        aria-label="Attendance summary"
+      >
+        {statTiles.map((tile) => (
+          <div key={tile.label} className="premium-card min-w-0 p-3 sm:p-3.5">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">{tile.label}</p>
+            <p className="mt-1 font-display text-lg text-ink sm:text-xl">{tile.value}</p>
+          </div>
+        ))}
+      </div>
+      {hasFilter ? (
+        <p className="mb-4 text-xs text-ink2">
+          Showing {currentOpRows.length} of {currentOpAllRows.length}
+        </p>
+      ) : null}
+      <div className="premium-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
         <div>
           <p className="font-display text-sm text-ink">Submission log</p>
