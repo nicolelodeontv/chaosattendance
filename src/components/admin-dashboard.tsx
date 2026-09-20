@@ -383,6 +383,7 @@ function SubmissionsTab({
 }) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
   const [editingRow, setEditingRow] = useState(false);
@@ -415,10 +416,19 @@ function SubmissionsTab({
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/attendance");
-    const data = await res.json();
-    setRows(data.submissions ?? []);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const res = await fetch("/api/attendance");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to load submissions.");
+      }
+      setRows(data.submissions ?? []);
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Unable to load submissions.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -576,6 +586,18 @@ function SubmissionsTab({
           <p className="font-display text-sm text-ink">Submission log</p>
           <p className="mt-1 text-xs text-ink2">Search by op, IGN, role or Discord username.</p>
         </div>
+        {loadError ? (
+          <div className="flex w-full items-center justify-between gap-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
+            <span>{loadError}</span>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="shrink-0 rounded-md border border-red/40 px-3 py-1.5 font-medium transition-colors hover:bg-red/10"
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <input
             type="text"
