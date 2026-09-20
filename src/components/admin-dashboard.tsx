@@ -656,8 +656,8 @@ function SubmissionsTab({
               <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">
                 {new Date(r.createdAt).toLocaleDateString()}
               </td>
-              <td className="px-2.5 py-3 text-right sm:px-3">
-                <div className="flex justify-end gap-1">
+              <td className="w-[74px] px-2.5 py-3 text-right sm:px-3">
+                <div className="flex min-w-[58px] justify-end gap-1">
                   <button type="button" onClick={() => { setSelected(r); setEditingRow(true); }} className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-cyan/5 hover:text-cyan" aria-label="Edit submission">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m16 3 5 5L8 21H3v-5Z" /><path d="m14 5 5 5" /></svg>
                   </button>
