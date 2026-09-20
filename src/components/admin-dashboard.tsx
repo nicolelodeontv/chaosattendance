@@ -442,18 +442,26 @@ function SubmissionsTab({
   }
 
   function requestDelete(row: Submission) {
+    if (!isOwner) return;
     setDeleteTarget(row);
     setDeleteError("");
   }
 
   async function remove(id: string) {
+    if (!isOwner) return;
     setDeleteLoading(true);
     setDeleteError("");
     try {
       const res = await fetch("/api/attendance/" + id, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Unable to delete submission.");
+        const fallbackByStatus: Record<number, string> = {
+          401: "You must be signed in to delete a submission.",
+          403: "You don't have permission to delete submissions.",
+          404: "Submission not found.",
+          500: "Unable to delete submission. Please try again.",
+        };
+        throw new Error(data.error || fallbackByStatus[res.status] || "Unable to delete submission.");
       }
       await load();
       setDeleteTarget(null);
@@ -661,15 +669,18 @@ function SubmissionsTab({
                   <button type="button" onClick={() => { setSelected(r); setEditingRow(true); }} className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-cyan/5 hover:text-cyan" aria-label="Edit submission">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m16 3 5 5L8 21H3v-5Z" /><path d="m14 5 5 5" /></svg>
                   </button>
-                  <button
-                    onClick={() => requestDelete(r)}
-                    className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
-                    aria-label="Delete submission"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18M8 6V4a1 1 0 0 1 1 1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
-                    </svg>
-                  </button>
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      onClick={() => requestDelete(r)}
+                      className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
+                      aria-label="Delete submission"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M8 6V4a1 1 0 0 1 1 1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+                      </svg>
+                    </button>
+                  ) : null}
                 </div>
               </td>
             </tr>
