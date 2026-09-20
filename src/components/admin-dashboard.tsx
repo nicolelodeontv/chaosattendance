@@ -1001,6 +1001,7 @@ function SubmissionsTab({
         />
       ) : null}
     </div>
+    </>
   );
 }
 
