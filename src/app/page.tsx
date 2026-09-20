@@ -55,7 +55,14 @@ export default async function Home({
     <div className="min-h-screen">
       <Navbar guildName={guildName} />
 
-      <main className="mx-auto flex w-full max-w-3xl flex-col px-4 py-8 sm:px-6 sm:py-12">
+      <main
+        className={[
+          "mx-auto flex w-full max-w-3xl flex-col px-4 sm:px-6 sm:py-12",
+          session?.user
+            ? "py-8"
+            : "min-h-[calc(100vh-65px)] justify-center py-8",
+        ].join(" ")}
+      >
         {session?.user ? (
           <>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -120,8 +127,8 @@ export default async function Home({
             </div>
           </>
         ) : (
-          <div className="premium-card p-7 sm:p-9">
-            <div className="mb-5 inline-flex rounded-full border border-cyan/30 bg-cyan/5 px-3 py-1 text-xs font-medium text-cyan">
+          <div className="premium-card p-7 text-center sm:p-9">
+            <div className="mx-auto mb-5 flex w-fit rounded-full border border-cyan/30 bg-cyan/5 px-3 py-1 text-xs font-medium text-cyan">
               Discord verification
             </div>
             {searchParams.authRequired && (
@@ -132,7 +139,7 @@ export default async function Home({
             <h1 className="font-display text-2xl tracking-tight text-ink">
               Sign in to report attendance
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-ink2">
+            <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-6 text-ink2">
               Use your Discord account to submit your IGN, attendance and pilot status for
               this op.
             </p>
@@ -141,9 +148,9 @@ export default async function Home({
                 "use server";
                 await signIn("discord");
               }}
-              className="mt-7"
+              className="mt-7 flex justify-center"
             >
-              <button className="premium-button w-full sm:w-auto">
+              <button className="premium-button mx-auto w-full sm:w-auto">
                 Sign in with Discord
               </button>
             </form>

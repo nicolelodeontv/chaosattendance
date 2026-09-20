@@ -639,7 +639,7 @@ function SubmissionsTab({
                   <button type="button" onClick={() => setSelected(r)} className="min-w-0 max-w-full break-words rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
-                  <RoleBadge role={r.role} />
+                  <RoleBadge variant={r.role} />
                 </div>
               </td>
               <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">{r.discordUsername}</td>
@@ -1184,7 +1184,7 @@ function AccessTab() {
       <div className="premium-card p-6">
         <div className="flex items-center gap-2">
           <p className="font-display text-sm text-ink">Owner</p>
-          <RoleBadge role="owner" />
+          <RoleBadge variant="owner" />
         </div>
         <p className="mt-1 text-sm leading-6 text-ink2">
           Owner access is controlled by the OWNER_DISCORD_ID environment variable.
@@ -1203,7 +1203,7 @@ function AccessTab() {
               <span className="min-w-0 text-ink">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{a.username}</span>
-                  <RoleBadge role={a.role} />
+                  <RoleBadge variant={a.role} />
                   <span className="text-ink2">— {a.discordId}</span>
                 </span>
               </span>
