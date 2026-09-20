@@ -707,11 +707,15 @@ function ReadOnlySubmissionCard({
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <SummaryItem label="IGN" value={submission.ign} />
         <SummaryItem label="Attendance" value={submission.attending ? "Attending" : "Not Attending"} />
-        <SummaryItem label="Pilot" value={submission.hasPilot ? "Have Pilot" : "No Pilot"} />
+        <SummaryItem
+          label="Pilot"
+          value={submission.hasPilot ? "Have Pilot" : "No Pilot"}
+          fullWidth={!submission.hasPilot}
+        />
         {submission.hasPilot ? (
           <SummaryItem label="Pilot Name" value={submission.pilotName || "—"} />
         ) : null}
-        <SummaryItem label="Hours" value={`${submission.hours} hrs`} />
+        <SummaryItem label="Hours" value={`${submission.hours} hrs`} fullWidth />
         <SummaryItem label="Submitted" value={formatSubmittedAt(submission.createdAt)} fullWidth />
         <SummaryItem label="Notes" value={submission.notes || "—"} fullWidth multiline />
       </div>
