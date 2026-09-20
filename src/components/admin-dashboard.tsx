@@ -59,6 +59,7 @@ type DeletedSubmission = {
 };
 
 const NOTIFICATION_STORAGE_KEY = "chaosattendance:admin-notifications:v1";
+const ARCHIVE_SETUP_MESSAGE = "The archive table hasn't been created in the database. Run docs/sql/deleted-submission.sql in your database's SQL editor, then press Refresh.";
 
 function readNotificationState(): { lastSeen: number; knownIds: string[] } {
   try {
@@ -1255,6 +1256,7 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
   const [rows, setRows] = useState<DeletedSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [archiveSetupRequired, setArchiveSetupRequired] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<DeletedSubmission | null>(null);
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreError, setRestoreError] = useState("");
@@ -1263,10 +1265,18 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
   async function load() {
     setLoading(true);
     setError("");
+    setArchiveSetupRequired(false);
     try {
       const res = await fetch("/api/admin/deleted-submissions", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Unable to load recently removed submissions.");
+      if (!res.ok) {
+        if (data.code === "ARCHIVE_NOT_SET_UP") {
+          setRows([]);
+          setArchiveSetupRequired(true);
+          return;
+        }
+        throw new Error(data.error || "Unable to load recently removed submissions.");
+      }
       setRows((data.submissions ?? []) as DeletedSubmission[]);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unable to load recently removed submissions.");
@@ -1299,9 +1309,14 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (data.code === "ARCHIVE_NOT_SET_UP") {
+          setArchiveSetupRequired(true);
+          throw new Error(data.error || "Recently removed isn't set up yet. The archive table hasn't been created.");
+        }
         throw new Error(data.error || "Unable to restore submission.");
       }
 
+      setArchiveSetupRequired(false);
       setRestoreTarget(null);
       await load();
       onRestored();
@@ -1331,7 +1346,13 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
           </button>
         </div>
 
-        {error ? (
+        {archiveSetupRequired ? (
+          <div className="m-4 rounded-xl border border-line bg-panel2/60 p-4" role="status">
+            <p className="font-display text-sm text-ink">Recently removed isn't set up yet</p>
+            <p className="mt-1 text-sm leading-6 text-ink2">{ARCHIVE_SETUP_MESSAGE}</p>
+          </div>
+        ) : null}
+        {!archiveSetupRequired && error ? (
           <div className="m-4 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert">
             {error}
           </div>
@@ -1341,12 +1362,12 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
           {loading ? (
             <div className="px-3 py-8 text-center text-sm text-ink2">Loading…</div>
           ) : null}
-          {!loading && rows.length === 0 ? (
+          {!loading && !archiveSetupRequired && rows.length === 0 ? (
             <div className="px-3 py-8 text-center text-sm text-ink2">
               No recently removed submissions.
             </div>
           ) : null}
-          {!loading && rows.map((row) => (
+          {!loading && !archiveSetupRequired && rows.map((row) => (
             <div key={row.id} className="rounded-xl border border-line bg-panel2/60 p-3.5 sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
