@@ -79,27 +79,25 @@ export default async function Home({
               </div>
 
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <span className="rounded-full border border-line bg-panel2 px-3 py-1.5 font-display text-xs text-ink2">
+                <span className="inline-flex h-8 items-center rounded-full border border-line bg-panel2 px-3 font-display text-xs text-ink2">
                   {currentOpId}
                 </span>
-                <div className="flex min-h-11 items-center gap-2 rounded-full border border-line bg-panel2 px-3 py-1.5">
+                <div className="inline-flex h-8 max-w-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-panel2 px-2.5 font-display text-xs">
                   {user.avatar ? (
                     <Image
                       src={user.avatar}
                       alt=""
-                      width={28}
-                      height={28}
-                      className="h-7 w-7 rounded-full border border-line"
+                      width={20}
+                      height={20}
+                      className="h-5 w-5 shrink-0 rounded-full border border-line"
                     />
                   ) : (
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-panel text-xs font-medium text-ink2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line bg-panel text-[10px] font-medium text-ink2">
                       {(user.username ?? "?").slice(0, 1).toUpperCase()}
                     </span>
                   )}
-                  <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-ink2">Submitting as</p>
-                    <p className="max-w-36 truncate text-sm font-medium text-ink">{user.username}</p>
-                  </div>
+                  <span className="submitting-as-label text-ink2">Submitting as</span>
+                  <span className="min-w-0 max-w-[140px] truncate font-semibold text-ink">{user.username}</span>
                 </div>
               </div>
             </div>
