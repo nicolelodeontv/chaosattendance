@@ -1407,6 +1407,12 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
                   <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Removed by</p>
                   <p className="mt-1 break-all text-sm text-ink">{row.deletedByDiscordId}</p>
                 </div>
+                {row.notes?.trim() ? (
+                  <div className="min-w-0 rounded-lg border border-line bg-panel p-2.5">
+                    <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Notes</p>
+                    <p className="mt-1 truncate text-sm text-ink" title={row.notes.trim()}>{row.notes.trim()}</p>
+                  </div>
+                ) : null}
               </div>
             </div>
           ))}
