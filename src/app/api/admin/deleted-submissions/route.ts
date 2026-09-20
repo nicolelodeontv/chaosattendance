@@ -28,12 +28,50 @@ export async function GET() {
   const cutoff = new Date(Date.now() - THIRTY_DAYS_MS);
 
   try {
-    const submissions = await prisma.deletedSubmission.findMany({
-      where: { deletedAt: { gte: cutoff } },
-      orderBy: { deletedAt: "desc" },
-    });
+    const [submissions, admins, currentSubmissions] = await Promise.all([
+      prisma.deletedSubmission.findMany({
+        where: { deletedAt: { gte: cutoff } },
+        orderBy: { deletedAt: "desc" },
+      }),
+      prisma.adminUser.findMany({
+        select: { discordId: true, username: true },
+      }),
+      prisma.submission.findMany({
+        select: { discordId: true, discordUsername: true },
+      }),
+    ]);
 
-    return NextResponse.json({ submissions });
+    const usernameByDiscordId = new Map<string, string>();
+
+    for (const submission of currentSubmissions) {
+      const discordId = submission.discordId.trim();
+      const username = submission.discordUsername.trim();
+      if (discordId && username && !usernameByDiscordId.has(discordId)) {
+        usernameByDiscordId.set(discordId, username);
+      }
+    }
+
+    for (const admin of admins) {
+      const discordId = admin.discordId.trim();
+      const username = admin.username.trim();
+      if (discordId && username && !usernameByDiscordId.has(discordId)) {
+        usernameByDiscordId.set(discordId, username);
+      }
+    }
+
+    const currentUserId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+    const currentUserName = typeof user?.username === "string" ? user.username.trim() : "";
+    if (currentUserId && currentUserName) {
+      usernameByDiscordId.set(currentUserId, currentUserName);
+    }
+
+    const submissionsWithNames = submissions.map((submission) => ({
+      ...submission,
+      deletedByUsername:
+        usernameByDiscordId.get(submission.deletedByDiscordId.trim()) ?? null,
+    }));
+
+    return NextResponse.json({ submissions: submissionsWithNames });
   } catch (error) {
     if (isMissingArchiveTable(error)) {
       return NextResponse.json(
