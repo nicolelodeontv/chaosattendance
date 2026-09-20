@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOwner } from "@/lib/admin";
+import { logServerError } from "@/lib/server-error";
 
 
 const MAX_IDS = 5000;
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
         throw archiveError;
       }
 
-      console.error(
+      logServerError(
         "DeletedSubmission archive table is missing; deleting without archive.",
         archiveError
       );
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, deleted: rows.length });
   } catch (error) {
-    console.error("Failed to remove submissions", error);
+    logServerError("Failed to remove submissions", error);
     return NextResponse.json({ error: "Unable to remove submissions." }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOwner } from "@/lib/admin";
+import { logServerError } from "@/lib/server-error";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -83,7 +84,7 @@ export async function GET() {
       );
     }
 
-    console.error("Failed to load deleted submissions", error);
+    logServerError("Failed to load deleted submissions", error);
     return NextResponse.json(
       { error: "Unable to load recently removed submissions." },
       { status: 500 }

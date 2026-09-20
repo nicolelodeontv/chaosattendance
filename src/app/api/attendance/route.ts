@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getRole, isAdmin } from "@/lib/admin";
 import { notifyDiscord } from "@/lib/discord";
+import { logServerError } from "@/lib/server-error";
 
 const MAX_NOTES_LENGTH = 500;
 const MAX_IGN_LENGTH = 64;
@@ -196,7 +197,7 @@ export async function POST(req: Request) {
       }
     }
 
-    console.error("Attendance submission failed:", error);
+    logServerError("Attendance submission failed:", error);
     return NextResponse.json({ error: "Unable to save your submission." }, { status: 500 });
   }
 }

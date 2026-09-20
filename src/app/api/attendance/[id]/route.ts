@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOwner } from "@/lib/admin";
+import { logServerError } from "@/lib/server-error";
 
 function isMissingArchiveTable(error: unknown): boolean {
   return (
@@ -59,7 +60,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
         throw archiveError;
       }
 
-      console.error(
+      logServerError(
         "DeletedSubmission archive table is missing; deleting without archive.",
         archiveError
       );
@@ -85,7 +86,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Submission not found" }, { status: 404 });
     }
 
-    console.error("Failed to delete submission", error);
+    logServerError("Failed to delete submission", error);
     return NextResponse.json({ error: "Unable to delete submission." }, { status: 500 });
   }
 }

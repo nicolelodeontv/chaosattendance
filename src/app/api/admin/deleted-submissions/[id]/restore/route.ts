@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOwner } from "@/lib/admin";
+import { logServerError } from "@/lib/server-error";
 
 const MEMBER_RESUBMITTED_ERROR =
   "This member has already submitted again. Delete their new response first.";
@@ -103,7 +104,7 @@ export async function POST(
       return NextResponse.json({ error: "Archived submission not found" }, { status: 404 });
     }
 
-    console.error("Failed to restore archived submission", error);
+    logServerError("Failed to restore archived submission", error);
     return NextResponse.json({ error: "Unable to restore submission." }, { status: 500 });
   }
 }
