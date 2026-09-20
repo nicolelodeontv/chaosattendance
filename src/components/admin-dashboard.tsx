@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { BaseModal } from "@/components/modal";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
 import { RoleBadge } from "@/components/role-badge";
@@ -779,6 +779,7 @@ function SubmissionDetailModal({
   onEdit: () => void;
   onSaved: (submission: Submission) => void | Promise<void>;
 }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [successOpen, setSuccessOpen] = useState(false);
@@ -826,7 +827,7 @@ function SubmissionDetailModal({
     setPendingSaved(null);
   }
 
-  return createPortal(
+  return (
     <>
       <SuccessDialog
         open={successOpen}
@@ -839,44 +840,116 @@ function SubmissionDetailModal({
         onClose={closeSuccess}
       />
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="submission-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto premium-card p-6 shadow-2xl sm:p-7">
+      <BaseModal
+        open={true}
+        title={selected.ign}
+        titleId="submission-detail-title"
+        onClose={onClose}
+        initialFocusRef={closeRef}
+        cardClassName="!max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto p-6 shadow-2xl sm:p-7"
+        beforeTitle={
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-cyan">
+              {editing ? "Edit submission" : "Submission detail"}
+            </p>
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              className="icon-button"
+              aria-label="Close submission detail dialog"
+            >
+              ×
+            </button>
+          </div>
+        }
+      >
         {editing ? (
-          <>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">Edit submission</p>
-                <h3 id="submission-detail-title" className="font-display text-xl text-ink">{selected.ign}</h3>
-              </div>
-              <button type="button" onClick={onClose} className="icon-button" aria-label="Close submission detail dialog">×</button>
+          <div className="mt-6 space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="admin-edit-ign" className="text-sm font-medium text-ink">IGN</label>
+              <input
+                id="admin-edit-ign"
+                type="text"
+                required
+                value={ign}
+                onChange={(e) => setIgn(e.target.value)}
+              />
             </div>
-            <div className="mt-6 space-y-5">
-              <div className="space-y-2"><label className="text-sm font-medium text-ink">IGN</label><input type="text" required value={ign} onChange={(e) => setIgn(e.target.value)} /></div>
-              <fieldset><legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend><div className="grid grid-cols-2 gap-2.5">
+            <fieldset>
+              <legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend>
+              <div className="grid grid-cols-2 gap-2.5">
                 <button type="button" onClick={() => setAttending(true)} className={[`premium-toggle`, attending ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Attending</button>
                 <button type="button" onClick={() => setAttending(false)} className={[`premium-toggle`, !attending ? `border-red bg-red/10 text-red` : ` `].join(" ")}>Not Attending</button>
-              </div></fieldset>
-              <fieldset><legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend><div className="grid grid-cols-2 gap-2.5">
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend>
+              <div className="grid grid-cols-2 gap-2.5">
                 <button type="button" onClick={() => setHasPilot(true)} className={[`premium-toggle`, hasPilot ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Have Pilot</button>
                 <button type="button" onClick={() => setHasPilot(false)} className={[`premium-toggle`, !hasPilot ? `border-red bg-red/10 text-red` : ` `].join(" ")}>No Pilot</button>
-              </div></fieldset>
-              {hasPilot && <div className="space-y-2"><label className="text-sm font-medium text-ink">Pilot Name</label><input type="text" required value={pilotName} onChange={(e) => setPilotName(e.target.value)} /></div>}
-              <div className="space-y-2"><label className="text-sm font-medium text-ink">Hours</label><input type="number" step="0.5" min="0" required value={hours} onChange={(e) => setHours(e.target.value)} /></div>
-              <div className="space-y-2"><label className="text-sm font-medium text-ink">Notes <span className="font-normal text-ink2">(optional)</span></label><textarea rows={3} value={notes} onChange={(e) => { setNotes(e.target.value); e.currentTarget.style.height = "auto"; e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`; }} style={{ resize: "none", overflow: "hidden" }} /></div>
-              {error && <div className="rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">{error}</div>}
-              <div className="flex gap-2"><button type="button" onClick={onClose} className="premium-button-secondary flex-1">Cancel</button><button type="button" onClick={save} disabled={saving} className="premium-button flex-1 disabled:cursor-not-allowed disabled:opacity-50">{saving ? "Saving…" : "Save"}</button></div>
+              </div>
+            </fieldset>
+            {hasPilot && (
+              <div className="space-y-2">
+                <label htmlFor="admin-edit-pilot-name" className="text-sm font-medium text-ink">Pilot Name</label>
+                <input
+                  id="admin-edit-pilot-name"
+                  type="text"
+                  required
+                  value={pilotName}
+                  onChange={(e) => setPilotName(e.target.value)}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <label htmlFor="admin-edit-hours" className="text-sm font-medium text-ink">Hours</label>
+              <input
+                id="admin-edit-hours"
+                type="number"
+                step="0.5"
+                min="0"
+                required
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
             </div>
-          </>
+            <div className="space-y-2">
+              <label htmlFor="admin-edit-notes" className="text-sm font-medium text-ink">
+                Notes <span className="font-normal text-ink2">(optional)</span>
+              </label>
+              <textarea
+                id="admin-edit-notes"
+                rows={3}
+                value={notes}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  e.currentTarget.style.height = "auto";
+                  e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                }}
+                style={{ resize: "none", overflow: "hidden" }}
+              />
+            </div>
+            {error && (
+              <div className="rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
+                {error}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="premium-button-secondary flex-1">Cancel</button>
+              <button type="button" onClick={save} disabled={saving} className="premium-button flex-1 disabled:cursor-not-allowed disabled:opacity-50">
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             <SubmissionDetailHeader selected={selected} onClose={onClose} />
             <button type="button" onClick={onEdit} className="premium-button mt-5 w-full">Edit submission</button>
           </>
         )}
-      </div>
-    </div>
-    </>,
-    document.body
+      </BaseModal>
+    </>
   );
 }
 
