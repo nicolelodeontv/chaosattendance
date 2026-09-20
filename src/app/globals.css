@@ -12,6 +12,15 @@
   --amber: 27 157 170;
   --cyan: 27 157 170;
   --red: 208 72 82;
+  --role-owner-fg: #92400E;
+  --role-owner-bg: rgba(217,119,6,0.12);
+  --role-owner-border: rgba(217,119,6,0.50);
+  --role-admin-fg: #0F766E;
+  --role-admin-bg: rgba(13,148,136,0.12);
+  --role-admin-border: rgba(13,148,136,0.50);
+  --role-member-fg: #475569;
+  --role-member-bg: rgba(100,116,139,0.10);
+  --role-member-border: rgba(100,116,139,0.35);
 }
 
 .dark {
@@ -24,6 +33,15 @@
   --amber: 71 202 214;
   --cyan: 71 202 214;
   --red: 228 87 99;
+  --role-owner-fg: #FBBF24;
+  --role-owner-bg: rgba(251,191,36,0.12);
+  --role-owner-border: rgba(251,191,36,0.45);
+  --role-admin-fg: #2DD4BF;
+  --role-admin-bg: rgba(45,212,191,0.12);
+  --role-admin-border: rgba(45,212,191,0.45);
+  --role-member-fg: #94A3B8;
+  --role-member-bg: rgba(148,163,184,0.10);
+  --role-member-border: rgba(148,163,184,0.30);
 }
 
 * {
@@ -177,6 +195,24 @@ body {
     box-shadow: 0 10px 28px rgb(var(--cyan) / 0.12);
     transform: translateY(-1px);
   }
+
+.role-badge--owner {
+  color: var(--role-owner-fg);
+  background-color: var(--role-owner-bg);
+  border-color: var(--role-owner-border);
+}
+
+.role-badge--admin {
+  color: var(--role-admin-fg);
+  background-color: var(--role-admin-bg);
+  border-color: var(--role-admin-border);
+}
+
+.role-badge--member {
+  color: var(--role-member-fg);
+  background-color: var(--role-member-bg);
+  border-color: var(--role-member-border);
+}
 
   .premium-button-secondary {
     display: inline-flex;
