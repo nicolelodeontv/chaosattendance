@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { BaseModal } from "@/components/modal";
 
-export const SUCCESS_DIALOG_AUTO_CLOSE_MS = 5000;
+const SUCCESS_DIALOG_AUTO_CLOSE_MS = 5000;
 
 export function SuccessDialog({
   open,
