@@ -18,9 +18,9 @@
   --role-admin-fg: #0F766E;
   --role-admin-bg: rgba(13,148,136,0.12);
   --role-admin-border: rgba(13,148,136,0.50);
-  --role-member-fg: #475569;
-  --role-member-bg: rgba(100,116,139,0.10);
-  --role-member-border: rgba(100,116,139,0.35);
+  --role-member-fg: #166534;
+  --role-member-bg: rgba(22,163,74,0.12);
+  --role-member-border: rgba(22,163,74,0.50);
 }
 
 .dark {
