@@ -155,6 +155,7 @@ export async function POST(req: Request) {
       pilotName: submission.pilotName,
       hours: submission.hours,
       notes: submission.notes,
+      created: !existing,
     });
 
     return NextResponse.json({

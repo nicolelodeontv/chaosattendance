@@ -3,6 +3,17 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOwner } from "@/lib/admin";
 
+const DISABLED_WEBHOOK_PREFIX = "__CHAOS_DISCORD_DISABLED__::";
+
+function decodeWebhook(raw: string | null): { webhookUrl: string; enabled: boolean } {
+  if (!raw) return { webhookUrl: "", enabled: true };
+  if (raw.startsWith(DISABLED_WEBHOOK_PREFIX)) {
+    const stored = raw.slice(DISABLED_WEBHOOK_PREFIX.length);
+    return { webhookUrl: stored === "__ENV__" ? "" : stored, enabled: false };
+  }
+  return { webhookUrl: raw, enabled: true };
+}
+
 export async function GET() {
   const session = await auth();
   if (!session) {
@@ -18,8 +29,15 @@ export async function GET() {
     update: {},
     create: { id: 1 },
   });
+  const webhook = decodeWebhook(settings.webhookUrl);
 
-  return NextResponse.json({ settings });
+  return NextResponse.json({
+    settings: {
+      ...settings,
+      webhookUrl: webhook.webhookUrl,
+      notificationsEnabled: webhook.enabled,
+    },
+  });
 }
 
 export async function PUT(req: Request) {
@@ -35,7 +53,9 @@ export async function PUT(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
-  const { webhookUrl, guildName, currentOpId } = body;
+  const { webhookUrl, guildName, currentOpId, notifyDiscord } = body;
+  const normalizedWebhook =
+    typeof webhookUrl === "string" ? webhookUrl.trim() : "";
   const normalizedOpId =
     typeof currentOpId === "string" ? currentOpId.trim() : undefined;
 
@@ -49,13 +69,16 @@ export async function PUT(req: Request) {
     );
   }
 
+  const notificationsEnabled = notifyDiscord !== false;
+  const storedWebhook =
+    notificationsEnabled
+      ? normalizedWebhook || null
+      : DISABLED_WEBHOOK_PREFIX + (normalizedWebhook || "__ENV__");
+
   const settings = await prisma.settings.upsert({
     where: { id: 1 },
     update: {
-      webhookUrl:
-        typeof webhookUrl === "string"
-          ? webhookUrl.trim() || null
-          : undefined,
+      webhookUrl: storedWebhook,
       guildName:
         typeof guildName === "string" && guildName.trim()
           ? guildName.trim()
@@ -64,8 +87,7 @@ export async function PUT(req: Request) {
     },
     create: {
       id: 1,
-      webhookUrl:
-        typeof webhookUrl === "string" ? webhookUrl.trim() || null : null,
+      webhookUrl: storedWebhook,
       guildName:
         typeof guildName === "string" && guildName.trim()
           ? guildName.trim()
@@ -74,5 +96,13 @@ export async function PUT(req: Request) {
     },
   });
 
-  return NextResponse.json({ settings });
+  const webhook = decodeWebhook(settings.webhookUrl);
+
+  return NextResponse.json({
+    settings: {
+      ...settings,
+      webhookUrl: webhook.webhookUrl,
+      notificationsEnabled: webhook.enabled,
+    },
+  });
 }
