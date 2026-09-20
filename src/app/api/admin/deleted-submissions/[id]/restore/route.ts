@@ -7,6 +7,13 @@ import { isOwner } from "@/lib/admin";
 const MEMBER_RESUBMITTED_ERROR =
   "This member has already submitted again. Delete their new response first.";
 
+function isMissingArchiveTable(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2021"
+  );
+}
+
 export async function POST(
   _req: Request,
   { params }: { params: { id: string } }
@@ -22,15 +29,15 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const archived = await prisma.deletedSubmission.findUnique({
-    where: { id: params.id },
-  });
-
-  if (!archived) {
-    return NextResponse.json({ error: "Archived submission not found" }, { status: 404 });
-  }
-
   try {
+    const archived = await prisma.deletedSubmission.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!archived) {
+      return NextResponse.json({ error: "Archived submission not found" }, { status: 404 });
+    }
+
     const restored = await prisma.$transaction(async (tx) => {
       const existing = await tx.submission.findUnique({
         where: {
@@ -68,6 +75,16 @@ export async function POST(
 
     return NextResponse.json({ ok: true, submission: restored });
   } catch (error) {
+    if (isMissingArchiveTable(error)) {
+      return NextResponse.json(
+        {
+          code: "ARCHIVE_NOT_SET_UP",
+          error: "Recently removed isn't set up yet. The archive table hasn't been created.",
+        },
+        { status: 503 }
+      );
+    }
+
     if (error instanceof Error && error.message === MEMBER_RESUBMITTED_ERROR) {
       return NextResponse.json({ error: MEMBER_RESUBMITTED_ERROR }, { status: 409 });
     }
