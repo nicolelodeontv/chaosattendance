@@ -25,7 +25,7 @@ type Submission = {
 
 type Admin = { discordId: string; username: string; createdAt: string; role: UserRole };
 
-type Tab = "submissions" | "settings" | "access";
+type Tab = "submissions" | "recentlyRemoved" | "settings" | "access";
 type NotificationItem = {
   id: string;
   ign: string;
@@ -40,6 +40,23 @@ type NotificationItem = {
 type NotificationTarget = { id: string; ign: string };
 type NotificationChange = Pick<NotificationItem, "id" | "ign" | "eventType" | "timestamp">;
 type SubmissionChangeEvent = { version: number; changes: NotificationChange[] };
+type DeletedSubmission = {
+  id: string;
+  originalId: string;
+  opId: string;
+  discordId: string;
+  discordUsername: string;
+  discordAvatar: string | null;
+  ign: string;
+  attending: boolean;
+  hasPilot: boolean;
+  pilotName: string | null;
+  hours: number;
+  notes: string | null;
+  createdAt: string;
+  deletedAt: string;
+  deletedByDiscordId: string;
+};
 
 const NOTIFICATION_STORAGE_KEY = "chaosattendance:admin-notifications:v1";
 
@@ -94,9 +111,12 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   const [submissionChangeEvent, setSubmissionChangeEvent] = useState<SubmissionChangeEvent | null>(null);
   const [notificationsReadVersion, setNotificationsReadVersion] = useState(0);
   const [deletedSubmissionIds, setDeletedSubmissionIds] = useState<string[]>([]);
+  const [submissionRefreshVersion, setSubmissionRefreshVersion] = useState(0);
   const submissionChangeVersionRef = useRef(0);
   const visibleTab: Tab = isOwner ? tab : "submissions";
-  const tabs: Tab[] = isOwner ? ["submissions", "settings", "access"] : ["submissions"];
+  const tabs: Tab[] = isOwner
+    ? ["submissions", "recentlyRemoved", "settings", "access"]
+    : ["submissions"];
 
   function openNotification(item: NotificationItem) {
     setTab("submissions");
@@ -149,7 +169,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
               visibleTab === t ? "bg-cyan/10 text-cyan" : "text-ink2 hover:bg-panel2 hover:text-ink",
             ].join(" ")}
           >
-            {t}
+            {t === "recentlyRemoved" ? "Recently removed" : t}
           </button>
         ))}
       </div>
@@ -163,6 +183,12 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
           notificationsReadVersion={notificationsReadVersion}
           onSubmissionChangeEventConsumed={() => setSubmissionChangeEvent(null)}
           onSubmissionsDeleted={handleSubmissionsDeleted}
+          externalRefreshVersion={submissionRefreshVersion}
+        />
+      )}
+      {visibleTab === "recentlyRemoved" && isOwner && (
+        <RecentlyRemovedTab
+          onRestored={() => setSubmissionRefreshVersion((version) => version + 1)}
         />
       )}
       {visibleTab === "settings" && isOwner && <SettingsTab />}
@@ -429,6 +455,7 @@ function SubmissionsTab({
   notificationsReadVersion,
   onSubmissionChangeEventConsumed,
   onSubmissionsDeleted,
+  externalRefreshVersion,
 }: {
   isOwner: boolean;
   notificationTarget: NotificationTarget | null;
@@ -437,6 +464,7 @@ function SubmissionsTab({
   notificationsReadVersion: number;
   onSubmissionChangeEventConsumed: () => void;
   onSubmissionsDeleted: (ids: string[]) => void;
+  externalRefreshVersion: number;
 }) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -467,6 +495,11 @@ function SubmissionsTab({
       }
       const nextRows = (data.submissions ?? []) as Submission[];
       setRows(nextRows);
+      setCurrentOpId(
+        typeof data.currentOpId === "string" && data.currentOpId.trim()
+          ? data.currentOpId.trim()
+          : "current"
+      );
       if (clearNew) setNewRowIds(new Set());
       return nextRows;
     } catch (err: unknown) {
@@ -508,6 +541,11 @@ function SubmissionsTab({
   }, [notificationsReadVersion]);
 
   useEffect(() => {
+    if (!externalRefreshVersion) return;
+    void load({ silent: true });
+  }, [externalRefreshVersion]);
+
+  useEffect(() => {
     if (!notificationTarget) return;
     let active = true;
     let scrollTimer: number | null = null;
@@ -546,13 +584,8 @@ function SubmissionsTab({
   }, [notificationTarget]);
 
   useEffect(() => {
-    load();
-    if (!isOwner) return;
-    fetch("/api/admin/settings")
-      .then((res) => res.json())
-      .then((data) => setCurrentOpId(data.settings?.currentOpId?.trim() || "current"))
-      .catch(() => setCurrentOpId("current"));
-  }, [isOwner]);
+    void load();
+  }, []);
 
   function showToast(message: string) {
     setToasts((current) => [
@@ -697,14 +730,49 @@ function SubmissionsTab({
     : 0;
 
   const hasFilter = filter.trim().length > 0;
+  const currentOpAllRows = rows.filter((r) => r.opId === currentOpId);
   const currentOpRows = filtered.filter((r) => r.opId === currentOpId);
+  const currentOpStats = {
+    attending: currentOpAllRows.filter((r) => r.attending).length,
+    notAttending: currentOpAllRows.filter((r) => !r.attending).length,
+    withPilot: currentOpAllRows.filter((r) => r.hasPilot).length,
+    noPilot: currentOpAllRows.filter((r) => !r.hasPilot).length,
+    totalHours: currentOpAllRows.reduce((total, row) => total + row.hours, 0),
+    totalSubmissions: currentOpAllRows.length,
+  };
   const bulkCount = currentOpRows.length;
   const bulkButtonLabel = hasFilter
     ? `Remove filtered (${bulkCount})`
     : `Remove all (${bulkCount})`;
 
+  const statTiles = [
+    { label: "Attending", value: currentOpStats.attending },
+    { label: "Not attending", value: currentOpStats.notAttending },
+    { label: "With pilot", value: currentOpStats.withPilot },
+    { label: "No pilot", value: currentOpStats.noPilot },
+    { label: "Total hours", value: Number(currentOpStats.totalHours.toFixed(1)) },
+    { label: "Total submissions", value: currentOpStats.totalSubmissions },
+  ];
+
   return (
-    <div className="premium-card overflow-hidden">
+    <>
+      <div
+        className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3"
+        aria-label="Attendance summary"
+      >
+        {statTiles.map((tile) => (
+          <div key={tile.label} className="premium-card min-w-0 p-3 sm:p-3.5">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">{tile.label}</p>
+            <p className="mt-1 font-display text-lg text-ink sm:text-xl">{tile.value}</p>
+          </div>
+        ))}
+      </div>
+      {hasFilter ? (
+        <p className="mb-4 text-xs text-ink2">
+          Showing {currentOpRows.length} of {currentOpAllRows.length}
+        </p>
+      ) : null}
+      <div className="premium-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
         <div>
           <p className="font-display text-sm text-ink">Submission log</p>
@@ -933,6 +1001,7 @@ function SubmissionsTab({
         />
       ) : null}
     </div>
+    </>
   );
 }
 
@@ -1178,6 +1247,181 @@ function Badge({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
       />
       {ok ? yes : no}
     </span>
+  );
+}
+
+
+function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
+  const [rows, setRows] = useState<DeletedSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [restoreTarget, setRestoreTarget] = useState<DeletedSubmission | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreError, setRestoreError] = useState("");
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/deleted-submissions", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Unable to load recently removed submissions.");
+      setRows((data.submissions ?? []) as DeletedSubmission[]);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unable to load recently removed submissions.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  function showToast(message: string) {
+    setToasts((current) => [
+      ...current,
+      { id: window.crypto.randomUUID(), message },
+    ]);
+  }
+
+  function dismissToast(id: string) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
+
+  async function restore(id: string) {
+    setRestoreLoading(true);
+    setRestoreError("");
+    try {
+      const res = await fetch("/api/admin/deleted-submissions/" + id + "/restore", {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to restore submission.");
+      }
+
+      setRestoreTarget(null);
+      await load();
+      onRestored();
+      showToast("Submission restored");
+    } catch (err: unknown) {
+      setRestoreError(err instanceof Error ? err.message : "Unable to restore submission.");
+    } finally {
+      setRestoreLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <div className="premium-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
+          <div>
+            <p className="font-display text-sm text-ink">Recently removed</p>
+            <p className="mt-1 text-xs text-ink2">Archived removals from the last 30 days.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="premium-button-secondary shrink-0 px-3"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {error ? (
+          <div className="m-4 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="space-y-2 p-3 sm:p-4">
+          {loading ? (
+            <div className="px-3 py-8 text-center text-sm text-ink2">Loading…</div>
+          ) : null}
+          {!loading && rows.length === 0 ? (
+            <div className="px-3 py-8 text-center text-sm text-ink2">
+              No recently removed submissions.
+            </div>
+          ) : null}
+          {!loading && rows.map((row) => (
+            <div key={row.id} className="rounded-xl border border-line bg-panel2/60 p-3.5 sm:p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                    <p className="font-medium text-ink">{row.ign}</p>
+                    <span className="font-display text-xs text-cyan">{row.opId}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-ink2">
+                    {row.discordUsername} <span className="text-ink2/70">({row.discordId})</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRestoreTarget(row);
+                    setRestoreError("");
+                  }}
+                  className="premium-button shrink-0 px-3"
+                >
+                  Restore
+                </button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg border border-line bg-panel p-2.5">
+                  <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Attendance</p>
+                  <p className="mt-1 text-sm text-ink">{row.attending ? "Attending" : "Not Attending"}</p>
+                </div>
+                <div className="rounded-lg border border-line bg-panel p-2.5">
+                  <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Hours</p>
+                  <p className="mt-1 text-sm text-ink">{row.hours}</p>
+                </div>
+                <div className="rounded-lg border border-line bg-panel p-2.5">
+                  <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Removed</p>
+                  <p className="mt-1 text-sm text-ink">{new Date(row.deletedAt).toLocaleString()}</p>
+                </div>
+                <div className="rounded-lg border border-line bg-panel p-2.5">
+                  <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Removed by</p>
+                  <p className="mt-1 break-all text-sm text-ink">{row.deletedByDiscordId}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={Boolean(restoreTarget)}
+        title="Restore submission?"
+        message={
+          <>
+            <strong className="font-medium text-ink">{restoreTarget?.ign}</strong> will be
+            restored to the submission log with its original response details.
+            {restoreError ? (
+              <div
+                className="mt-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red"
+                role="alert"
+                aria-live="assertive"
+              >
+                {restoreError}
+              </div>
+            ) : null}
+          </>
+        }
+        confirmLabel="Restore"
+        variant="default"
+        loading={restoreLoading}
+        onCancel={() => {
+          if (!restoreLoading) {
+            setRestoreTarget(null);
+            setRestoreError("");
+          }
+        }}
+        onConfirm={() => (restoreTarget ? restore(restoreTarget.id) : undefined)}
+      />
+    </>
   );
 }
 

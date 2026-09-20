@@ -208,13 +208,18 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [submissions, admins] = await Promise.all([
+  const [submissions, admins, settings] = await Promise.all([
     prisma.submission.findMany({
       orderBy: { createdAt: "desc" },
     }),
     prisma.adminUser.findMany({ select: { discordId: true } }),
+    prisma.settings.findUnique({
+      where: { id: 1 },
+      select: { currentOpId: true },
+    }).catch(() => null),
   ]);
 
+  const currentOpId = settings?.currentOpId?.trim() || "current";
   const adminIds = new Set(admins.map((admin) => admin.discordId.trim()));
 
   const submissionsWithRoles = await Promise.all(
@@ -225,6 +230,7 @@ export async function GET() {
   );
 
   return NextResponse.json({
+    currentOpId,
     submissions: submissionsWithRoles,
   });
 }
