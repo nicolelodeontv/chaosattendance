@@ -1,4 +1,4 @@
-CREATE TABLE "DeletedSubmission" (
+CREATE TABLE IF NOT EXISTS "DeletedSubmission" (
   "id" TEXT NOT NULL,
   "originalId" TEXT NOT NULL,
   "opId" TEXT NOT NULL,
@@ -17,14 +17,14 @@ CREATE TABLE "DeletedSubmission" (
   CONSTRAINT "DeletedSubmission_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "DeletedSubmission_deletedAt_idx"
+CREATE INDEX IF NOT EXISTS "DeletedSubmission_deletedAt_idx"
   ON "DeletedSubmission"("deletedAt");
 
-CREATE INDEX "DeletedSubmission_opId_deletedAt_idx"
+CREATE INDEX IF NOT EXISTS "DeletedSubmission_opId_deletedAt_idx"
   ON "DeletedSubmission"("opId", "deletedAt");
 
-CREATE INDEX "DeletedSubmission_originalId_idx"
+CREATE INDEX IF NOT EXISTS "DeletedSubmission_originalId_idx"
   ON "DeletedSubmission"("originalId");
 
-CREATE INDEX "DeletedSubmission_discordId_idx"
+CREATE INDEX IF NOT EXISTS "DeletedSubmission_discordId_idx"
   ON "DeletedSubmission"("discordId");
