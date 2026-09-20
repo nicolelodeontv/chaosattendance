@@ -38,6 +38,8 @@ type NotificationItem = {
 };
 
 type NotificationTarget = { id: string; ign: string };
+type NotificationChange = Pick<NotificationItem, "id" | "ign" | "eventType" | "timestamp">;
+type SubmissionChangeEvent = { version: number; changes: NotificationChange[] };
 
 const NOTIFICATION_STORAGE_KEY = "chaosattendance:admin-notifications:v1";
 
@@ -89,6 +91,10 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   const [tab, setTab] = useState<Tab>("submissions");
   const [notificationTarget, setNotificationTarget] = useState<NotificationTarget | null>(null);
   const [notificationToasts, setNotificationToasts] = useState<ToastItem[]>([]);
+  const [submissionChangeEvent, setSubmissionChangeEvent] = useState<SubmissionChangeEvent | null>(null);
+  const [notificationsReadVersion, setNotificationsReadVersion] = useState(0);
+  const [deletedSubmissionIds, setDeletedSubmissionIds] = useState<string[]>([]);
+  const submissionChangeVersionRef = useRef(0);
   const visibleTab: Tab = isOwner ? tab : "submissions";
   const tabs: Tab[] = isOwner ? ["submissions", "settings", "access"] : ["submissions"];
 
@@ -104,6 +110,16 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
     ]);
   }
 
+  function handleSubmissionChanges(changes: NotificationChange[]) {
+    submissionChangeVersionRef.current += 1;
+    setSubmissionChangeEvent({ version: submissionChangeVersionRef.current, changes });
+  }
+
+  function handleSubmissionsDeleted(ids: string[]) {
+    if (ids.length === 0) return;
+    setDeletedSubmissionIds((current) => [...new Set([...current, ...ids])].slice(-50));
+  }
+
   return (
     <div>
       <ToastContainer
@@ -117,6 +133,9 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         <AdminNotificationBell
           onOpenNotification={openNotification}
           onNewSubmission={addNotificationToast}
+          onSubmissionChanges={handleSubmissionChanges}
+          onNotificationsRead={() => setNotificationsReadVersion((version) => version + 1)}
+          deletedSubmissionIds={deletedSubmissionIds}
         />
       </div>
 
@@ -140,6 +159,10 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
           isOwner={isOwner}
           notificationTarget={notificationTarget}
           onNotificationTargetConsumed={() => setNotificationTarget(null)}
+          submissionChangeEvent={submissionChangeEvent}
+          notificationsReadVersion={notificationsReadVersion}
+          onSubmissionChangeEventConsumed={() => setSubmissionChangeEvent(null)}
+          onSubmissionsDeleted={handleSubmissionsDeleted}
         />
       )}
       {visibleTab === "settings" && isOwner && <SettingsTab />}
@@ -151,9 +174,15 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
 function AdminNotificationBell({
   onOpenNotification,
   onNewSubmission,
+  onSubmissionChanges,
+  onNotificationsRead,
+  deletedSubmissionIds,
 }: {
   onOpenNotification: (notification: NotificationItem) => void;
   onNewSubmission: (message: string) => void;
+  onSubmissionChanges: (changes: NotificationChange[]) => void;
+  onNotificationsRead: () => void;
+  deletedSubmissionIds: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -161,7 +190,7 @@ function AdminNotificationBell({
   const [loading, setLoading] = useState(true);
   const rootRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
-  const alertedIdsRef = useRef<Set<string>>(new Set());
+  const alertedChangeKeysRef = useRef<Set<string>>(new Set());
 
   const unreadCount = notifications.filter(
     (notification) => new Date(notification.timestamp).getTime() > lastSeen
@@ -190,26 +219,38 @@ function AdminNotificationBell({
       const latest = Number(data.latestTimestamp) || state.lastSeen;
       setNotifications(items);
 
+      const knownIds = Array.from(
+        new Set([...state.knownIds, ...items.map((item) => item.id)])
+      ).slice(-20);
+      writeNotificationState({ lastSeen: state.lastSeen, knownIds });
+
       if (!initializedRef.current) {
+        for (const item of items) {
+          alertedChangeKeysRef.current.add(item.id + ":" + item.timestamp);
+        }
         writeNotificationState({
           lastSeen: Math.max(state.lastSeen, latest),
-          knownIds: items.map((item) => item.id),
+          knownIds,
         });
         setLastSeen(Math.max(state.lastSeen, latest));
         initializedRef.current = true;
         return;
       }
 
+      const changedItems: NotificationChange[] = [];
       for (const item of items) {
         const timestamp = new Date(item.timestamp).getTime();
-        if (
-          item.eventType === "created" &&
-          timestamp > state.lastSeen &&
-          !alertedIdsRef.current.has(item.id)
-        ) {
-          alertedIdsRef.current.add(item.id);
+        const changeKey = item.id + ":" + item.timestamp;
+        if (timestamp <= state.lastSeen || alertedChangeKeysRef.current.has(changeKey)) continue;
+        alertedChangeKeysRef.current.add(changeKey);
+        changedItems.push(item);
+        if (item.eventType === "created") {
           onNewSubmission("New submission from " + item.ign);
         }
+      }
+
+      if (changedItems.length > 0) {
+        onSubmissionChanges(changedItems);
       }
     } catch {
       // A failed poll should not interrupt the admin console.
@@ -265,7 +306,15 @@ function AdminNotificationBell({
       knownIds: notifications.map((notification) => notification.id),
     });
     setLastSeen(latest);
+    onNotificationsRead();
   }
+
+  useEffect(() => {
+    if (deletedSubmissionIds.length === 0) return;
+    setNotifications((current) =>
+      current.filter((notification) => !deletedSubmissionIds.includes(notification.id))
+    );
+  }, [deletedSubmissionIds]);
 
   return (
     <div ref={rootRef} className="relative">
@@ -376,10 +425,18 @@ function SubmissionsTab({
   isOwner,
   notificationTarget,
   onNotificationTargetConsumed,
+  submissionChangeEvent,
+  notificationsReadVersion,
+  onSubmissionChangeEventConsumed,
+  onSubmissionsDeleted,
 }: {
   isOwner: boolean;
   notificationTarget: NotificationTarget | null;
   onNotificationTargetConsumed: () => void;
+  submissionChangeEvent: SubmissionChangeEvent | null;
+  notificationsReadVersion: number;
+  onSubmissionChangeEventConsumed: () => void;
+  onSubmissionsDeleted: (ids: string[]) => void;
 }) {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -397,39 +454,96 @@ function SubmissionsTab({
   const [bulkDeleteError, setBulkDeleteError] = useState("");
   const [bulkConfirmText, setBulkConfirmText] = useState("");
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
+  const [newRowIds, setNewRowIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (!notificationTarget) return;
-    setFilter(notificationTarget.ign);
-    setHighlightedRowId(notificationTarget.id);
-    onNotificationTargetConsumed();
-
-    const element = document.getElementById("submission-row-" + notificationTarget.id);
-    if (element) {
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      element.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
-    }
-
-    const timer = window.setTimeout(() => setHighlightedRowId(null), 2200);
-    return () => window.clearTimeout(timer);
-  }, [notificationTarget, onNotificationTargetConsumed]);
-
-  async function load() {
-    setLoading(true);
+  async function load({ silent = false, clearNew = false }: { silent?: boolean; clearNew?: boolean } = {}) {
+    if (!silent) setLoading(true);
     setLoadError("");
     try {
-      const res = await fetch("/api/attendance");
+      const res = await fetch("/api/attendance", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || "Unable to load submissions.");
       }
-      setRows(data.submissions ?? []);
+      const nextRows = (data.submissions ?? []) as Submission[];
+      setRows(nextRows);
+      if (clearNew) setNewRowIds(new Set());
+      return nextRows;
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : "Unable to load submissions.");
+      return null;
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!submissionChangeEvent) return;
+    let active = true;
+    void (async () => {
+      const nextRows = await load({ silent: true });
+      if (!active) return;
+      if (nextRows) {
+        const createdIds = submissionChangeEvent.changes
+          .filter((change) => change.eventType === "created")
+          .map((change) => change.id);
+        if (createdIds.length > 0) {
+          setNewRowIds((current) => {
+            const next = new Set(current);
+            createdIds.forEach((id) => next.add(id));
+            return next;
+          });
+        }
+      }
+      onSubmissionChangeEventConsumed();
+    })();
+    return () => {
+      active = false;
+    };
+  }, [submissionChangeEvent]);
+
+  useEffect(() => {
+    if (!notificationsReadVersion) return;
+    setNewRowIds(new Set());
+  }, [notificationsReadVersion]);
+
+  useEffect(() => {
+    if (!notificationTarget) return;
+    let active = true;
+    let scrollTimer: number | null = null;
+    let highlightTimer: number | null = null;
+
+    void (async () => {
+      const nextRows = await load({ silent: true });
+      if (!active) return;
+
+      const match = nextRows?.find((row) => row.id === notificationTarget.id);
+      if (!match) {
+        setFilter("");
+        setHighlightedRowId(null);
+        showToast("That submission has been removed");
+        onNotificationTargetConsumed();
+        return;
+      }
+
+      setFilter(match.ign);
+      setHighlightedRowId(match.id);
+      onNotificationTargetConsumed();
+      scrollTimer = window.setTimeout(() => {
+        const element = document.getElementById("submission-row-" + match.id);
+        if (!element) return;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        element.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      }, 0);
+      highlightTimer = window.setTimeout(() => setHighlightedRowId(null), 3000);
+    })();
+
+    return () => {
+      active = false;
+      if (scrollTimer !== null) window.clearTimeout(scrollTimer);
+      if (highlightTimer !== null) window.clearTimeout(highlightTimer);
+    };
+  }, [notificationTarget]);
 
   useEffect(() => {
     load();
@@ -473,7 +587,8 @@ function SubmissionsTab({
         };
         throw new Error(data.error || fallbackByStatus[res.status] || "Unable to delete submission.");
       }
-      await load();
+      await load({ clearNew: true });
+      onSubmissionsDeleted([id]);
       setDeleteTarget(null);
       showToast("Submission deleted");
     } catch (err: any) {
@@ -512,7 +627,8 @@ function SubmissionsTab({
         throw new Error(data.error || "Unable to remove submissions.");
       }
 
-      await load();
+      await load({ clearNew: true });
+      onSubmissionsDeleted(targets.map((row) => row.id));
       setBulkDeleteOpen(false);
       setBulkConfirmText("");
       showToast(`${data.deleted ?? 0} submissions removed`);
@@ -562,15 +678,23 @@ function SubmissionsTab({
     URL.revokeObjectURL(url);
   }
 
-  const filtered = rows.filter((r) => {
-    const query = filter.toLowerCase();
+  function matchesFilter(row: Submission, value: string) {
+    const query = value.toLowerCase();
     return (
-      r.opId.toLowerCase().includes(query) ||
-      r.ign.toLowerCase().includes(query) ||
-      ROLE_LABELS[r.role].toLowerCase().includes(query) ||
-      r.discordUsername.toLowerCase().includes(query)
+      row.opId.toLowerCase().includes(query) ||
+      row.ign.toLowerCase().includes(query) ||
+      ROLE_LABELS[row.role].toLowerCase().includes(query) ||
+      row.discordUsername.toLowerCase().includes(query)
     );
-  });
+  }
+
+  const filtered = rows.filter((r) => matchesFilter(r, filter));
+  const hiddenNewSubmissionCount = filter.trim()
+    ? Array.from(newRowIds).filter((id) => {
+        const row = rows.find((item) => item.id === id);
+        return Boolean(row && !matchesFilter(row, filter));
+      }).length
+    : 0;
 
   const hasFilter = filter.trim().length > 0;
   const currentOpRows = filtered.filter((r) => r.opId === currentOpId);
@@ -599,16 +723,32 @@ function SubmissionsTab({
           </div>
         ) : null}
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          <input
-            id="submission-filter"
-            type="text"
-            placeholder="Filter submissions"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="min-w-0 flex-1 sm:w-64"
-            aria-label="Filter submissions"
-          />
-          <button onClick={load} className="premium-button-secondary shrink-0 px-3">
+          <div className="min-w-0 flex-1 sm:w-64">
+            <input
+              id="submission-filter"
+              type="text"
+              placeholder="Filter submissions"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="min-w-0"
+              aria-label="Filter submissions"
+            />
+            {hiddenNewSubmissionCount > 0 ? (
+              <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs leading-5 text-ink2">
+                <span>
+                  {hiddenNewSubmissionCount} new submission{hiddenNewSubmissionCount === 1 ? "" : "s"} hidden by filter.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilter("")}
+                  className="font-medium text-cyan underline decoration-cyan/50 underline-offset-2 hover:text-ink"
+                >
+                  Clear filter
+                </button>
+              </p>
+            ) : null}
+          </div>
+          <button onClick={() => void load({ clearNew: true })} className="premium-button-secondary shrink-0 px-3">
             Refresh
           </button>
           <button onClick={exportCsv} className="premium-button-secondary hidden shrink-0 px-3 sm:inline-flex">
@@ -662,6 +802,7 @@ function SubmissionsTab({
               key={r.id}
               className={[
                 "border-b border-line last:border-0 transition-colors duration-200",
+                newRowIds.has(r.id) ? "submission-row--new" : "",
                 highlightedRowId === r.id ? "bg-cyan/10" : "",
               ].join(" ")}
             >
@@ -671,6 +812,11 @@ function SubmissionsTab({
                   <button type="button" onClick={() => setSelected(r)} className="min-w-0 max-w-full break-words rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
+                  {newRowIds.has(r.id) ? (
+                    <span className="rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-cyan">
+                      NEW
+                    </span>
+                  ) : null}
                   <RoleBadge variant={r.role} />
                 </div>
               </td>
