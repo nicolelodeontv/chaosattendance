@@ -587,6 +587,15 @@ body {
   flex-direction: column;
 }
 
+/* Only the signed-out sign-in page is fixed to the viewport.
+   All authenticated pages keep normal document scrolling. */
+.sign-in-page {
+  height: calc(100vh - 48px);
+  min-height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
 .page-scroll-area,
 .admin-scroll-area {
   min-width: 0;
