@@ -468,3 +468,77 @@ body {
 .role-badge {
   line-height: 1.25;
 }
+
+
+/* Single-line data presentation */
+.data-clip {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-cell {
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.data-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.data-table th:nth-child(1),
+.data-table td:nth-child(1) { width: 8%; }
+
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) { width: 16%; }
+
+.data-table th:nth-child(3),
+.data-table td:nth-child(3) { width: 14%; }
+
+.data-table th:nth-child(4),
+.data-table td:nth-child(4) { width: 13%; }
+
+.data-table th:nth-child(5),
+.data-table td:nth-child(5) { width: 16%; }
+
+.data-table th:nth-child(6),
+.data-table td:nth-child(6) { width: 7%; }
+
+.data-table th:nth-child(7),
+.data-table td:nth-child(7) { width: 12%; }
+
+.data-table th:nth-child(8),
+.data-table td:nth-child(8) { width: 9%; }
+
+.data-table th:nth-child(9),
+.data-table td:nth-child(9) { width: 5%; }
+
+.data-table button.data-clip {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .data-table th,
+  .data-table td {
+    padding-left: 0.45rem !important;
+    padding-right: 0.45rem !important;
+  }
+}
