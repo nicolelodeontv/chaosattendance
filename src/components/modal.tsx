@@ -127,7 +127,7 @@ export function BaseModal({
     >
       <div
         ref={dialogRef}
-        className={["confirm-dialog-card premium-card w-full max-w-md p-6 shadow-2xl sm:p-7", cardClassName].filter(Boolean).join(" ")}
+        className={["confirm-dialog-card modal-scroll-card premium-card w-full max-w-md p-6 shadow-2xl sm:p-7", cardClassName].filter(Boolean).join(" ")}
         role={role}
         aria-modal="true"
         aria-labelledby={titleId}
