@@ -91,3 +91,38 @@ export async function GET() {
     );
   }
 }
+
+
+export async function DELETE() {
+  const session = await auth();
+  const user = session?.user as any;
+
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  if (!isOwner(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const result = await prisma.deletedSubmission.deleteMany({});
+    return NextResponse.json({ ok: true, deleted: result.count });
+  } catch (error) {
+    if (isMissingArchiveTable(error)) {
+      return NextResponse.json(
+        {
+          code: "ARCHIVE_NOT_SET_UP",
+          error: "Recently removed isn't set up yet. The archive table hasn't been created.",
+        },
+        { status: 503 }
+      );
+    }
+
+    logServerError("Failed to clear deleted submissions", error);
+    return NextResponse.json(
+      { error: "Unable to clear recently removed submissions." },
+      { status: 500 }
+    );
+  }
+}
