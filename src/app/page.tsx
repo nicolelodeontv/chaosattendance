@@ -52,7 +52,7 @@ export default async function Home({
     : null;
 
   return (
-    <div className="site-page">
+    <div className={session?.user ? "site-page" : "site-page sign-in-page"}>
       <Navbar guildName={guildName} />
 
       <main
