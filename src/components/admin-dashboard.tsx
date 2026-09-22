@@ -430,10 +430,15 @@ function AdminNotificationBell({
                       aria-hidden="true"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm leading-5 text-ink">
+                      <p
+                        className="data-clip text-sm leading-5 text-ink"
+                        title={item.ign + " " + detail}
+                      >
                         <span className="font-medium">{item.ign}</span> {detail}
                       </p>
-                      <p className="mt-1 text-xs text-ink2">{relativeTime(item.timestamp)}</p>
+                      <p className="data-clip mt-1 text-xs text-ink2" title={item.timestamp}>
+                        {relativeTime(item.timestamp)}
+                      </p>
                     </div>
                   </div>
                 </button>
@@ -1248,7 +1253,12 @@ function SubmissionDetailBody({ selected }: { selected: Submission }) {
       </div>
       <div className="mt-3 rounded-lg border border-line bg-panel2/60 p-4">
         <p className="text-xs uppercase tracking-[0.12em] text-ink2">Notes</p>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{selected.notes ?? "—"}</p>
+        <p
+          className="data-clip mt-2 text-sm leading-6 text-ink"
+          title={selected.notes ?? "—"}
+        >
+          {selected.notes ?? "—"}
+        </p>
       </div>
     </>
   );
