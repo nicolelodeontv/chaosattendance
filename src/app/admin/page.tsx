@@ -19,12 +19,14 @@ export default async function AdminPage() {
   const guildName = settings?.guildName ?? "Squadron";
 
   return (
-    <div className="min-h-screen">
+    <div className="site-page">
       <Navbar guildName={guildName} />
-      <main className="mx-auto max-w-5xl px-5 py-10">
-        <h1 className="font-display text-xl text-ink">Admin console</h1>
-        <p className="mt-1 text-sm text-ink2">Submissions, notifications and access control.</p>
-        <div className="mt-8">
+      <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-5 py-6 sm:py-8">
+        <div className="shrink-0">
+          <h1 className="font-display text-xl text-ink">Admin console</h1>
+          <p className="mt-1 text-sm text-ink2">Submissions, notifications and access control.</p>
+        </div>
+        <div className="mt-6 min-h-0 flex-1">
           <AdminDashboard isOwner={isOwner(user)} />
         </div>
       </main>
