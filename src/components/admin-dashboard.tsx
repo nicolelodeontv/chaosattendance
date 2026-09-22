@@ -145,7 +145,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div>
       <ToastContainer
         toasts={notificationToasts}
         onDismiss={(id) =>
@@ -178,7 +178,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         ))}
       </div>
 
-      <div className="admin-scroll-area min-h-0 flex-1">
+      <div>
         {visibleTab === "submissions" && (
           <SubmissionsTab
           isOwner={isOwner}
@@ -197,7 +197,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         />
       )}
       {visibleTab === "settings" && isOwner && <SettingsTab />}
-        {visibleTab === "access" && isOwner && <AccessTab />}
+      {visibleTab === "access" && isOwner && <AccessTab />}
       </div>
     </div>
   );
