@@ -13,7 +13,7 @@ export function RoleBadge({ variant }: { variant: UserRole }) {
   return (
     <span
       className={[
-        "role-badge inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em]",
+        "role-badge inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.08em]",
         ROLE_MODIFIERS[variant],
       ].join(" ")}
       aria-label={`Role: ${readableLabel}`}
