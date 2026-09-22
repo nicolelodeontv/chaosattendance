@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Rajdhani, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SiteFooter } from "@/components/site-footer";
 
 const display = Rajdhani({
   subsets: ["latin"],
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={[display.variable, body.variable, mono.variable].join(" ")}
     >
-      <body>{children}</body>
+      <body><div className="site-shell"><div className="site-content">{children}</div><SiteFooter /></div></body>
     </html>
   );
 }
