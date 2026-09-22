@@ -892,7 +892,8 @@ function SubmissionsTab({
               <td className="data-cell px-2.5 py-3 font-display text-xs text-cyan sm:px-3"><span className="data-clip" title={r.opId}>{r.opId}</span></td>
               <td className="px-2.5 py-3 text-ink sm:px-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <button type="button" onClick={() => setSelected(r)} className="data-clip w-full rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+                  <button type="button" onClick={() => setSelected(r)} title={r.ign}
+                    className="data-clip w-full rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
                   {newRowIds.has(r.id) ? (
