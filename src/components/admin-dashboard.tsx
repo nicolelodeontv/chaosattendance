@@ -61,6 +61,8 @@ type DeletedSubmission = {
 
 const NOTIFICATION_STORAGE_KEY = "chaosattendance:admin-notifications:v1";
 const ARCHIVE_SETUP_MESSAGE = "The archive table hasn't been created in the database. Run docs/sql/deleted-submission.sql in your database's SQL editor, then press Refresh.";
+const RECENTLY_REMOVED_PAGE_SIZE = 2;
+const SUBMISSIONS_PAGE_SIZE = 10;
 
 function readNotificationState(): { lastSeen: number; knownIds: string[] } {
   try {
@@ -475,6 +477,10 @@ function SubmissionsTab({
   const [selected, setSelected] = useState<Submission | null>(null);
   const [editingRow, setEditingRow] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [archivePage, setArchivePage] = useState(1);
+  const [clearArchiveOpen, setClearArchiveOpen] = useState(false);
+  const [clearArchiveLoading, setClearArchiveLoading] = useState(false);
+  const [clearArchiveError, setClearArchiveError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -485,6 +491,7 @@ function SubmissionsTab({
   const [bulkConfirmText, setBulkConfirmText] = useState("");
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
   const [newRowIds, setNewRowIds] = useState<Set<string>>(new Set());
+  const [submissionPage, setSubmissionPage] = useState(1);
 
   async function load({ silent = false, clearNew = false }: { silent?: boolean; clearNew?: boolean } = {}) {
     if (!silent) setLoading(true);
@@ -541,6 +548,10 @@ function SubmissionsTab({
     if (!notificationsReadVersion) return;
     setNewRowIds(new Set());
   }, [notificationsReadVersion]);
+
+  useEffect(() => {
+    setSubmissionPage(1);
+  }, [filter]);
 
   useEffect(() => {
     if (!externalRefreshVersion) return;
@@ -724,6 +735,12 @@ function SubmissionsTab({
   }
 
   const filtered = rows.filter((r) => matchesFilter(r, filter));
+  const submissionPageCount = Math.max(1, Math.ceil(filtered.length / SUBMISSIONS_PAGE_SIZE));
+  const safeSubmissionPage = Math.min(submissionPage, submissionPageCount);
+  const pagedFiltered = filtered.slice(
+    (safeSubmissionPage - 1) * SUBMISSIONS_PAGE_SIZE,
+    safeSubmissionPage * SUBMISSIONS_PAGE_SIZE
+  );
   const hiddenNewSubmissionCount = filter.trim()
     ? Array.from(newRowIds).filter((id) => {
         const row = rows.find((item) => item.id === id);
@@ -866,7 +883,7 @@ function SubmissionsTab({
               </td>
             </tr>
           )}
-          {filtered.map((r) => (
+          {pagedFiltered.map((r) => (
             <tr
               id={"submission-row-" + r.id}
               key={r.id}
@@ -883,7 +900,7 @@ function SubmissionsTab({
                     {r.ign}
                   </button>
                   {newRowIds.has(r.id) ? (
-                    <span className="rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-cyan">
+                    <span className="rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan">
                       NEW
                     </span>
                   ) : null}
@@ -927,6 +944,14 @@ function SubmissionsTab({
           ))}
         </tbody>
       </table></div>
+      {filtered.length > SUBMISSIONS_PAGE_SIZE ? (
+        <PaginationControls
+          page={safeSubmissionPage}
+          pageCount={submissionPageCount}
+          onPageChange={setSubmissionPage}
+          label="Submission log pages"
+        />
+      ) : null}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <ConfirmDialog
         open={bulkDeleteOpen}
@@ -1253,6 +1278,76 @@ function Badge({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
 }
 
 
+function PaginationControls({
+  page,
+  pageCount,
+  onPageChange,
+  label,
+}: {
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
+  label: string;
+}) {
+  if (pageCount <= 1) return null;
+
+  const items: Array<number | "ellipsis"> =
+    pageCount <= 5
+      ? Array.from({ length: pageCount }, (_, index) => index + 1)
+      : page <= 3
+        ? [1, 2, 3, 4, "ellipsis", pageCount]
+        : page >= pageCount - 2
+          ? [1, "ellipsis", pageCount - 3, pageCount - 2, pageCount - 1, pageCount]
+          : [1, "ellipsis", page - 1, page, page + 1, "ellipsis", pageCount];
+
+  return (
+    <nav
+      className="flex flex-wrap items-center justify-center gap-1.5 border-t border-line px-3 py-4 sm:px-4"
+      aria-label={label}
+    >
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="min-h-9 rounded-md border border-line bg-panel2 px-3 text-sm font-medium text-ink2 transition-colors hover:border-orange/50 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Previous
+      </button>
+      {items.map((item, index) =>
+        item === "ellipsis" ? (
+          <span key={"ellipsis-" + index} className="px-1.5 text-sm text-ink2" aria-hidden="true">
+            …
+          </span>
+        ) : (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onPageChange(item)}
+            aria-current={page === item ? "page" : undefined}
+            className={[
+              "min-h-9 min-w-9 rounded-md border px-2.5 text-sm font-medium transition-colors",
+              page === item
+                ? "border-orange bg-orange/10 text-orange"
+                : "border-line bg-panel2 text-ink2 hover:border-orange/50 hover:text-ink",
+            ].join(" ")}
+          >
+            {item}
+          </button>
+        )
+      )}
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.min(pageCount, page + 1))}
+        disabled={page === pageCount}
+        className="min-h-9 rounded-md border border-line bg-panel2 px-3 text-sm font-medium text-ink2 transition-colors hover:border-orange/50 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Next
+      </button>
+    </nav>
+  );
+}
+
+
 function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
   const [rows, setRows] = useState<DeletedSubmission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1279,6 +1374,7 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
         throw new Error(data.error || "Unable to load recently removed submissions.");
       }
       setRows((data.submissions ?? []) as DeletedSubmission[]);
+      setArchivePage(1);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unable to load recently removed submissions.");
     } finally {
@@ -1299,6 +1395,40 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
 
   function dismissToast(id: string) {
     setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
+
+  function requestClearArchive() {
+    if (rows.length === 0 || clearArchiveLoading) return;
+    setClearArchiveError("");
+    setClearArchiveOpen(true);
+  }
+
+  async function clearArchive() {
+    if (rows.length === 0) return;
+    setClearArchiveLoading(true);
+    setClearArchiveError("");
+    try {
+      const res = await fetch("/api/admin/deleted-submissions", {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data.code === "ARCHIVE_NOT_SET_UP") {
+          setArchiveSetupRequired(true);
+        }
+        throw new Error(data.error || "Unable to clear the recently removed archive.");
+      }
+      setRows([]);
+      setArchivePage(1);
+      setClearArchiveOpen(false);
+      showToast((data.deleted ?? 0) + " archived submissions permanently deleted");
+    } catch (err: unknown) {
+      setClearArchiveError(
+        err instanceof Error ? err.message : "Unable to clear the recently removed archive."
+      );
+    } finally {
+      setClearArchiveLoading(false);
+    }
   }
 
   async function restore(id: string) {
@@ -1329,6 +1459,13 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
     }
   }
 
+  const archivePageCount = Math.max(1, Math.ceil(rows.length / RECENTLY_REMOVED_PAGE_SIZE));
+  const safeArchivePage = Math.min(archivePage, archivePageCount);
+  const pagedRows = rows.slice(
+    (safeArchivePage - 1) * RECENTLY_REMOVED_PAGE_SIZE,
+    safeArchivePage * RECENTLY_REMOVED_PAGE_SIZE
+  );
+
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -1338,13 +1475,23 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
             <p className="font-display text-sm text-ink">Recently removed</p>
             <p className="mt-1 text-xs text-ink2">Archived removals from the last 30 days.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="premium-button-secondary shrink-0 px-3"
-          >
-            Refresh
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="premium-button-secondary shrink-0 px-3"
+            >
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={requestClearArchive}
+              disabled={rows.length === 0 || loading || clearArchiveLoading}
+              className="inline-flex min-h-[42px] shrink-0 items-center justify-center rounded-[10px] border border-red/70 bg-red/5 px-3 text-sm font-semibold text-red transition-colors hover:border-red hover:bg-red/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Remove all ({rows.length})
+            </button>
+          </div>
         </div>
 
         {archiveSetupRequired ? (
@@ -1368,7 +1515,7 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
               No recently removed submissions.
             </div>
           ) : null}
-          {!loading && !archiveSetupRequired && rows.map((row) => (
+          {!loading && !archiveSetupRequired && pagedRows.map((row) => (
             <div key={row.id} className="rounded-xl border border-line bg-panel2/60 p-3.5 sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
@@ -1419,8 +1566,46 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
               </div>
             </div>
           ))}
+          {rows.length > RECENTLY_REMOVED_PAGE_SIZE ? (
+            <PaginationControls
+              page={safeArchivePage}
+              pageCount={archivePageCount}
+              onPageChange={setArchivePage}
+              label="Recently removed pages"
+            />
+          ) : null}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={clearArchiveOpen}
+        title="Remove all archived records?"
+        message={
+          <>
+            This will permanently delete <strong className="font-medium text-ink">{rows.length}</strong> archived removal records.
+            They cannot be restored after the archive is cleared.
+            {clearArchiveError ? (
+              <div
+                className="mt-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red"
+                role="alert"
+                aria-live="assertive"
+              >
+                {clearArchiveError}
+              </div>
+            ) : null}
+          </>
+        }
+        confirmLabel="Remove all"
+        variant="danger"
+        loading={clearArchiveLoading}
+        onCancel={() => {
+          if (!clearArchiveLoading) {
+            setClearArchiveOpen(false);
+            setClearArchiveError("");
+          }
+        }}
+        onConfirm={clearArchive}
+      />
 
       <ConfirmDialog
         open={Boolean(restoreTarget)}
