@@ -36,7 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={[display.variable, body.variable, mono.variable].join(" ")}
     >
-      <body><div className="site-shell"><div className="site-content">{children}</div><SiteFooter /></div></body>
+      <body>
+        <div className="site-shell">
+          <div className="site-content">{children}</div>
+          <SiteFooter />
+        </div>
+      </body>
     </html>
   );
 }
