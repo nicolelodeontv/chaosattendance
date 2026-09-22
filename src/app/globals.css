@@ -65,6 +65,7 @@ html {
 }
 
 body {
+  overflow-x: hidden;
   min-height: 100%;
   margin: 0;
   position: relative;
