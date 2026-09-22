@@ -57,14 +57,12 @@ export default async function Home({
 
       <main
         className={[
-          "relative z-10 mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 sm:px-6 sm:py-12",
-          session?.user
-            ? "overflow-hidden py-8"
-            : "overflow-hidden py-8",
+          "relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 sm:px-6 sm:py-12",
+          "py-8",
         ].join(" ")}
       >
         {session?.user ? (
-          <div className="page-scroll-area min-h-0 flex-1">
+          <div>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
                 <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-orange">
@@ -125,7 +123,7 @@ export default async function Home({
             </div>
           </div>
         ) : (
-          <div className="page-scroll-area flex min-h-0 flex-1 items-center justify-center py-8">
+          <div className="flex items-center justify-center py-8">
             <div className="premium-card mx-auto w-full max-w-[380px] px-8 pb-8 pt-10 text-center">
             <div className="mx-auto mb-[22px] flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-2xl bg-black shadow-[0_0_0_1px_var(--red-deep),0_0_26px_rgba(249,115,22,0.5)]">
               <Image
