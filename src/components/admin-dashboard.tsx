@@ -895,14 +895,18 @@ function SubmissionsTab({
               ].join(" ")}
             >
               <td className="data-cell px-2.5 py-3 font-display text-xs text-cyan sm:px-3"><span className="data-clip" title={r.opId}>{r.opId}</span></td>
-              <td className="px-2.5 py-3 text-ink sm:px-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <button type="button" onClick={() => setSelected(r)} title={r.ign}
-                    className="data-clip w-full rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+              <td className="data-cell px-2.5 py-3 text-ink sm:px-3">
+                <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setSelected(r)}
+                    title={r.ign}
+                    className="data-clip min-w-0 flex-1 rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50"
+                  >
                     {r.ign}
                   </button>
                   {newRowIds.has(r.id) ? (
-                    <span className="rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan">
+                    <span className="shrink-0 rounded-full border border-cyan/30 bg-cyan/10 px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cyan">
                       NEW
                     </span>
                   ) : null}
@@ -915,16 +919,21 @@ function SubmissionsTab({
               <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={String(r.hours)}>{r.hours}</span></td>
               <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.notes ?? "—"}>{r.notes ?? "—"}</span></td>
               <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={new Date(r.createdAt).toLocaleString()}>{new Date(r.createdAt).toLocaleDateString()}</span></td>
-              <td className="w-[74px] px-2.5 py-3 text-right sm:px-3">
-                <div className="flex min-w-[58px] justify-end gap-1">
-                  <button type="button" onClick={() => { setSelected(r); setEditingRow(true); }} className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-cyan/5 hover:text-cyan" aria-label="Edit submission">
+              <td className="actions-cell px-2.5 py-3 text-right sm:px-3">
+                <div className="actions-cell__inner">
+                  <button
+                    type="button"
+                    onClick={() => { setSelected(r); setEditingRow(true); }}
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink2 transition-colors hover:bg-cyan/5 hover:text-cyan"
+                    aria-label="Edit submission"
+                  >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m16 3 5 5L8 21H3v-5Z" /><path d="m14 5 5 5" /></svg>
                   </button>
                   {isOwner ? (
                     <button
                       type="button"
                       onClick={() => requestDelete(r)}
-                      className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-red/5 hover:text-red"
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink2 transition-colors hover:bg-red/5 hover:text-red"
                       aria-label="Delete submission"
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
