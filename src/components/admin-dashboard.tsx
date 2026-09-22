@@ -365,7 +365,7 @@ function AdminNotificationBell({
           <path d="M10 21h4" />
         </svg>
         {unreadCount > 0 ? (
-          <span className="absolute -right-1 -top-1 min-w-5 rounded-full border border-panel bg-red px-1 text-[10px] font-semibold leading-5 text-white">
+          <span className="absolute -right-1 -top-1 min-w-5 rounded-full border border-panel bg-red px-1 text-[11px] font-semibold leading-5 text-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : null}
