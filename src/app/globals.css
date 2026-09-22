@@ -454,12 +454,6 @@ body {
   line-height: 1.4 !important;
 }
 
-.text-\\[10px\\],
-.text-\\[9px\\] {
-  font-size: 0.6875rem !important;
-  line-height: 1.3 !important;
-}
-
 .premium-button,
 .premium-button-secondary {
   font-size: 0.78rem;
