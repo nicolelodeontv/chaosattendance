@@ -23,7 +23,8 @@ export async function notifyDiscord(sub: SubmissionPayload) {
     const webhookUrl = configuredWebhook || process.env.DISCORD_WEBHOOK_URL;
     if (!webhookUrl) return;
 
-    const color = sub.attending ? 0x47cad6 : 0xe45763;
+    const color = 0xf97316;
+    const logoUrl = "https://chaosattendance.vercel.app/chaos-clan-logo.jpg";
     const fields = [
       { name: "Op", value: sub.opId, inline: true },
       { name: "IGN", value: sub.ign, inline: true },
@@ -46,12 +47,25 @@ export async function notifyDiscord(sub: SubmissionPayload) {
     if (sub.notes) fields.push({ name: "Notes", value: sub.notes, inline: false });
 
     const body = {
+      username: "Chaos Squadron",
+      avatar_url: logoUrl,
       embeds: [
         {
-          title: sub.created ? "New attendance submission" : "Attendance response updated",
+          title: sub.created ? "🔥 New Attendance Submission" : "🔥 Attendance Response Updated",
           description: "Submitted by " + sub.discordUsername,
           color,
+          author: {
+            name: "CHAOS Attendance",
+            icon_url: logoUrl,
+          },
+          thumbnail: {
+            url: logoUrl,
+          },
           fields,
+          footer: {
+            text: "Chaos Squadron · Attendance Log",
+            icon_url: logoUrl,
+          },
           timestamp: new Date().toISOString(),
         },
       ],
