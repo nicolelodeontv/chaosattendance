@@ -1,8 +1,8 @@
 import { auth, signOut } from "@/auth";
 import { isAdmin } from "@/lib/admin";
-import { ThemeToggle } from "./theme-toggle";
 import Image from "next/image";
 import Link from "next/link";
+import { SignOutButton } from "./sign-out-button";
 
 export async function Navbar({ guildName }: { guildName: string }) {
   const session = await auth();
@@ -41,8 +41,6 @@ export async function Navbar({ guildName }: { guildName: string }) {
             </Link>
           )}
 
-          <ThemeToggle />
-
           {user && (
             <div className="flex shrink-0 items-center gap-2 border-l border-line pl-2">
               {user.avatar && (
@@ -57,19 +55,12 @@ export async function Navbar({ guildName }: { guildName: string }) {
               <span className="hidden max-w-[120px] truncate text-sm text-ink2 min-[400px]:inline">
                 {user.username}
               </span>
-              <form
+              <SignOutButton
                 action={async () => {
                   "use server";
                   await signOut({ redirectTo: "/" });
                 }}
-              >
-                <button
-                  type="submit"
-                  className="premium-button-secondary h-8 !min-h-8 shrink-0 whitespace-nowrap px-3 py-0 text-xs"
-                >
-                  Sign out
-                </button>
-              </form>
+              />
             </div>
           )}
         </div>
