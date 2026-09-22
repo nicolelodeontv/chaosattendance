@@ -508,28 +508,46 @@ body {
 .data-table td:nth-child(1) { width: 8%; }
 
 .data-table th:nth-child(2),
-.data-table td:nth-child(2) { width: 16%; }
+.data-table td:nth-child(2) { width: 14%; }
 
 .data-table th:nth-child(3),
-.data-table td:nth-child(3) { width: 14%; }
+.data-table td:nth-child(3) { width: 12%; }
 
 .data-table th:nth-child(4),
-.data-table td:nth-child(4) { width: 13%; }
+.data-table td:nth-child(4) { width: 12%; }
 
 .data-table th:nth-child(5),
-.data-table td:nth-child(5) { width: 16%; }
+.data-table td:nth-child(5) { width: 15%; }
 
 .data-table th:nth-child(6),
-.data-table td:nth-child(6) { width: 7%; }
+.data-table td:nth-child(6) { width: 6%; }
 
 .data-table th:nth-child(7),
 .data-table td:nth-child(7) { width: 12%; }
 
 .data-table th:nth-child(8),
-.data-table td:nth-child(8) { width: 9%; }
+.data-table td:nth-child(8) { width: 10%; }
 
-.data-table th:nth-child(9),
-.data-table td:nth-child(9) { width: 5%; }
+/* Reserve a non-compressible action area outside the truncating data-cell rules. */
+.data-table th:last-child,
+.data-table td:last-child,
+.data-table .actions-cell {
+  width: 84px;
+  min-width: 84px;
+  max-width: 84px;
+  overflow: visible;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.data-table .actions-cell__inner {
+  display: flex;
+  width: 64px;
+  min-width: 64px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
 
 .data-table button.data-clip {
   min-width: 0;
@@ -541,5 +559,49 @@ body {
   .data-table td {
     padding-left: 0.45rem !important;
     padding-right: 0.45rem !important;
+  }
+}
+
+
+/* Global site footer */
+.site-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-content {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+
+.site-footer {
+  flex: 0 0 auto;
+  padding: 14px 20px 18px;
+  text-align: center;
+  font-family: var(--font-mono), 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text-dim-hex);
+}
+
+.site-footer a {
+  color: var(--text-muted-hex);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.site-footer a:hover {
+  color: var(--orange-soft-hex);
+}
+
+.site-footer a:focus-visible {
+  color: var(--orange-soft-hex);
+}
+
+@media (max-width: 640px) {
+  .site-footer {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
