@@ -23,6 +23,10 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Attendance",
   description: "Squadron attendance tracking",
+  icons: {
+    icon: [{ url: "/chaos-icon.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/chaos-icon.jpg", type: "image/jpeg" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
