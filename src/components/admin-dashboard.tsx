@@ -145,14 +145,14 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   }
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <ToastContainer
         toasts={notificationToasts}
         onDismiss={(id) =>
           setNotificationToasts((current) => current.filter((toast) => toast.id !== id))
         }
       />
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
         <p className="font-display text-sm text-ink">Admin workspace</p>
         <AdminNotificationBell
           onOpenNotification={openNotification}
@@ -163,7 +163,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         />
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-line bg-panel/70 p-1">
+      <div className="mb-6 flex shrink-0 flex-wrap gap-1 rounded-xl border border-line bg-panel/70 p-1">
         {tabs.map((t) => (
           <button
             key={t}
@@ -178,8 +178,9 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         ))}
       </div>
 
-      {visibleTab === "submissions" && (
-        <SubmissionsTab
+      <div className="admin-scroll-area min-h-0 flex-1">
+        {visibleTab === "submissions" && (
+          <SubmissionsTab
           isOwner={isOwner}
           notificationTarget={notificationTarget}
           onNotificationTargetConsumed={() => setNotificationTarget(null)}
@@ -196,7 +197,8 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         />
       )}
       {visibleTab === "settings" && isOwner && <SettingsTab />}
-      {visibleTab === "access" && isOwner && <AccessTab />}
+        {visibleTab === "access" && isOwner && <AccessTab />}
+      </div>
     </div>
   );
 }
