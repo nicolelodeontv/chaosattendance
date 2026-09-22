@@ -850,17 +850,17 @@ function SubmissionsTab({
         </div>
       </div>
 
-      <div className="overflow-x-auto"><table className="w-full table-auto text-left text-sm">
+      <div className="w-full overflow-hidden"><table className="data-table w-full table-fixed text-left text-sm">
         <thead>
           <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
-            <th className="px-2.5 py-3 font-medium sm:px-3">Op</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">IGN</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">Discord</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">Attendance</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">Pilot</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">Hours</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">Notes</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3">Submitted</th>
+            <th title="Op" className="px-2.5 py-3 font-medium sm:px-3">Op</th>
+            <th title="IGN" className="px-2.5 py-3 font-medium sm:px-3">IGN</th>
+            <th title="Discord" className="px-2.5 py-3 font-medium sm:px-3">Discord</th>
+            <th title="Attendance" className="px-2.5 py-3 font-medium sm:px-3">Attendance</th>
+            <th title="Pilot" className="px-2.5 py-3 font-medium sm:px-3">Pilot</th>
+            <th title="Hours" className="px-2.5 py-3 font-medium sm:px-3">Hours</th>
+            <th title="Notes" className="px-2.5 py-3 font-medium sm:px-3">Notes</th>
+            <th title="Submitted" className="px-2.5 py-3 font-medium sm:px-3">Submitted</th>
             <th className="px-2.5 py-3 font-medium sm:px-3" />
           </tr>
         </thead>
@@ -889,10 +889,10 @@ function SubmissionsTab({
                 highlightedRowId === r.id ? "bg-cyan/10" : "",
               ].join(" ")}
             >
-              <td className="px-2.5 py-3 font-display text-xs text-cyan sm:px-3 whitespace-nowrap">{r.opId}</td>
+              <td className="data-cell px-2.5 py-3 font-display text-xs text-cyan sm:px-3"><span className="data-clip" title={r.opId}>{r.opId}</span></td>
               <td className="px-2.5 py-3 text-ink sm:px-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <button type="button" onClick={() => setSelected(r)} className="min-w-0 max-w-full break-words rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
+                  <button type="button" onClick={() => setSelected(r)} className="data-clip w-full rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50">
                     {r.ign}
                   </button>
                   {newRowIds.has(r.id) ? (
@@ -903,20 +903,12 @@ function SubmissionsTab({
                   <RoleBadge variant={r.role} />
                 </div>
               </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">{r.discordUsername}</td>
-              <td className="px-2.5 py-3 sm:px-3 whitespace-nowrap">
-                <Badge ok={r.attending} yes="Attending" no="Not Attending" />
-              </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">
-                {r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}
-              </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">{r.hours}</td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">
-                {r.notes ?? "—"}
-              </td>
-              <td className="px-2.5 py-3 text-ink2 sm:px-3 whitespace-nowrap">
-                {new Date(r.createdAt).toLocaleDateString()}
-              </td>
+              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.discordUsername}>{r.discordUsername}</span></td>
+              <td className="data-cell px-2.5 py-3 sm:px-3"><span className="data-clip" title={r.attending ? "Attending" : "Not Attending"}><Badge ok={r.attending} yes="Attending" no="Not Attending" /></span></td>
+              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}>{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</span></td>
+              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={String(r.hours)}>{r.hours}</span></td>
+              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.notes ?? "—"}>{r.notes ?? "—"}</span></td>
+              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={new Date(r.createdAt).toLocaleString()}>{new Date(r.createdAt).toLocaleDateString()}</span></td>
               <td className="w-[74px] px-2.5 py-3 text-right sm:px-3">
                 <div className="flex min-w-[58px] justify-end gap-1">
                   <button type="button" onClick={() => { setSelected(r); setEditingRow(true); }} className="rounded-md px-2 py-1 text-ink2 transition-colors hover:bg-cyan/5 hover:text-cyan" aria-label="Edit submission">
@@ -1520,12 +1512,10 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                    <p className="font-medium text-ink">{row.ign}</p>
-                    <span className="font-display text-xs text-cyan">{row.opId}</span>
+                    <p className="data-clip max-w-full font-medium text-ink" title={row.ign}>{row.ign}</p>
+                    <span className="data-clip max-w-[10rem] font-display text-xs text-cyan" title={row.opId}>{row.opId}</span>
                   </div>
-                  <p className="mt-1 text-sm text-ink2">
-                    <span title={row.discordId}>{row.discordUsername.trim() || row.discordId}</span>
-                  </p>
+                  <p className="mt-1 text-sm text-ink2"><span className="data-clip" title={row.discordUsername.trim() || row.discordId}>{row.discordUsername.trim() || row.discordId}</span></p>
                 </div>
                 <button
                   type="button"
@@ -1541,26 +1531,24 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <div className="rounded-lg border border-line bg-panel p-2.5">
                   <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Attendance</p>
-                  <p className="mt-1 text-sm text-ink">{row.attending ? "Attending" : "Not Attending"}</p>
+                  <p className="data-clip mt-1 text-sm text-ink" title={row.attending ? "Attending" : "Not Attending"}>{row.attending ? "Attending" : "Not Attending"}</p>
                 </div>
                 <div className="rounded-lg border border-line bg-panel p-2.5">
                   <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Hours</p>
-                  <p className="mt-1 text-sm text-ink">{row.hours}</p>
+                  <p className="data-clip mt-1 text-sm text-ink" title={String(row.hours)}>{row.hours}</p>
                 </div>
                 <div className="rounded-lg border border-line bg-panel p-2.5">
                   <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Removed</p>
-                  <p className="mt-1 text-sm text-ink">{new Date(row.deletedAt).toLocaleString()}</p>
+                  <p className="data-clip mt-1 text-sm text-ink" title={new Date(row.deletedAt).toLocaleString()}>{new Date(row.deletedAt).toLocaleString()}</p>
                 </div>
                 <div className="rounded-lg border border-line bg-panel p-2.5">
                   <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Removed by</p>
-                  <p className="mt-1 break-all text-sm text-ink">
-                    <span title={row.deletedByDiscordId}>{row.deletedByUsername?.trim() || row.deletedByDiscordId}</span>
-                  </p>
+                  <p className="data-clip mt-1 text-sm text-ink" title={row.deletedByUsername?.trim() || row.deletedByDiscordId}>{row.deletedByUsername?.trim() || row.deletedByDiscordId}</p>
                 </div>
                 {row.notes?.trim() ? (
                   <div className="min-w-0 rounded-lg border border-line bg-panel p-2.5">
                     <p className="text-[11px] uppercase tracking-[0.1em] text-ink2">Notes</p>
-                    <p className="mt-1 truncate text-sm text-ink" title={row.notes.trim()}>{row.notes.trim()}</p>
+                    <p className="data-clip mt-1 text-sm text-ink" title={row.notes.trim()}>{row.notes.trim()}</p>
                   </div>
                 ) : null}
               </div>
@@ -1912,9 +1900,9 @@ function AccessTab() {
               >
                 <span className="min-w-0 flex-1 text-ink">
                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="min-w-0 max-w-full truncate font-medium">{a.username}</span>
+                    <span className="data-clip min-w-0 max-w-full font-medium" title={a.username}>{a.username}</span>
                     <RoleBadge variant={a.role} />
-                    <span className="min-w-0 break-all text-ink2">— {a.discordId}</span>
+                    <span className="data-clip min-w-0 text-ink2" title={a.discordId}>— {a.discordId}</span>
                   </span>
                 </span>
                 <button
