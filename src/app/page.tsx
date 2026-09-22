@@ -67,7 +67,7 @@ export default async function Home({
           <>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
-                <p className="mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-orange">
+                <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-orange">
                   Current operation
                 </p>
                 <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
@@ -92,7 +92,7 @@ export default async function Home({
                       className="h-5 w-5 shrink-0 rounded-full border border-line"
                     />
                   ) : (
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line bg-panel text-[10px] font-medium text-ink2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line bg-panel text-[11px] font-medium text-ink2">
                       {(user.username ?? "?").slice(0, 1).toUpperCase()}
                     </span>
                   )}
