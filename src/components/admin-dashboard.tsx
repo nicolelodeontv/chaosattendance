@@ -477,10 +477,6 @@ function SubmissionsTab({
   const [selected, setSelected] = useState<Submission | null>(null);
   const [editingRow, setEditingRow] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [archivePage, setArchivePage] = useState(1);
-  const [clearArchiveOpen, setClearArchiveOpen] = useState(false);
-  const [clearArchiveLoading, setClearArchiveLoading] = useState(false);
-  const [clearArchiveError, setClearArchiveError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -1357,6 +1353,10 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreError, setRestoreError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [archivePage, setArchivePage] = useState(1);
+  const [clearArchiveOpen, setClearArchiveOpen] = useState(false);
+  const [clearArchiveLoading, setClearArchiveLoading] = useState(false);
+  const [clearArchiveError, setClearArchiveError] = useState("");
 
   async function load() {
     setLoading(true);
