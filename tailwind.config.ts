@@ -15,18 +15,27 @@ const config: Config = {
         amber: "rgb(var(--amber) / <alpha-value>)",
         cyan: "rgb(var(--cyan) / <alpha-value>)",
         red: "rgb(var(--red) / <alpha-value>)",
+        orange: "rgb(var(--orange) / <alpha-value>)",
+        "orange-soft": "rgb(var(--orange-soft) / <alpha-value>)",
+        ember: "rgb(var(--ember) / <alpha-value>)",
+        discord: "rgb(var(--discord) / <alpha-value>)",
       },
       fontFamily: {
-        display: ["var(--font-display)", "sans-serif"],
-        body: ["var(--font-body)", "sans-serif"],
+        display: ["var(--font-display)", "Rajdhani", "sans-serif"],
+        title: ["var(--font-display)", "Rajdhani", "sans-serif"],
+        body: ["var(--font-body)", "Rajdhani", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
       },
       borderRadius: {
-        sm: "3px",
-        DEFAULT: "4px",
-        md: "6px",
+        sm: "6px",
+        DEFAULT: "8px",
+        md: "10px",
+        lg: "14px",
+        xl: "14px",
       },
     },
   },
   plugins: [],
 };
+
 export default config;

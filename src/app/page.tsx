@@ -57,7 +57,7 @@ export default async function Home({
 
       <main
         className={[
-          "mx-auto flex w-full max-w-3xl flex-col px-4 sm:px-6 sm:py-12",
+          "relative z-10 mx-auto flex w-full max-w-3xl flex-col px-4 sm:px-6 sm:py-12",
           session?.user
             ? "py-8"
             : "min-h-[calc(100vh-65px)] justify-center py-8",
@@ -67,10 +67,10 @@ export default async function Home({
           <>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
-                <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-cyan">
+                <p className="mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-orange">
                   Current operation
                 </p>
-                <h1 className="font-display text-2xl tracking-tight text-ink">
+                <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
                   Attendance report
                 </h1>
                 <p className="mt-1.5 max-w-xl text-sm leading-6 text-ink2">
@@ -79,10 +79,10 @@ export default async function Home({
               </div>
 
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <span className="inline-flex h-8 items-center rounded-full border border-line bg-panel2 px-3 font-display text-xs text-ink2">
+                <span className="inline-flex h-8 items-center rounded-full border border-line bg-panel2 px-3 font-mono text-xs text-ink2">
                   {currentOpId}
                 </span>
-                <div className="inline-flex h-8 max-w-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-panel2 px-2.5 font-display text-xs">
+                <div className="inline-flex h-8 max-w-full shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-panel2 px-2.5 font-mono text-xs">
                   {user.avatar ? (
                     <Image
                       src={user.avatar}
@@ -125,33 +125,51 @@ export default async function Home({
             </div>
           </>
         ) : (
-          <div className="premium-card p-7 text-center sm:p-9">
-            <div className="mx-auto mb-5 flex w-fit rounded-full border border-cyan/30 bg-cyan/5 px-3 py-1 text-xs font-medium text-cyan">
-              Discord verification
+          <div className="premium-card mx-auto w-full max-w-[380px] px-8 pb-8 pt-10 text-center">
+            <div className="mx-auto mb-[22px] flex h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-2xl bg-black shadow-[0_0_0_1px_var(--red-deep),0_0_26px_rgba(249,115,22,0.5)]">
+              <Image
+                src="/chaos-clan-logo.jpg"
+                alt="Chaos clan logo"
+                width={88}
+                height={88}
+                priority
+                className="h-full w-full object-cover"
+              />
             </div>
-            {searchParams.authRequired && (
-              <p className="mb-4 rounded-md border border-cyan/30 bg-cyan/5 px-3 py-2 text-sm text-cyan">
-                Sign in to continue.
-              </p>
-            )}
-            <h1 className="font-display text-2xl tracking-tight text-ink">
+
+            <h1 className="font-display text-[22px] font-bold tracking-[0.2px] text-ink">
               Sign in to report attendance
             </h1>
-            <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-6 text-ink2">
+            <p className="mx-auto mb-0 mt-2 max-w-[44ch] text-sm leading-[1.5] text-ink2">
               Use your Discord account to submit your IGN, attendance and pilot status for
               this op.
             </p>
+
+            {searchParams.authRequired && (
+              <p className="mb-0 mt-4 rounded-md border border-orange/30 bg-orange/5 px-3 py-2 text-sm text-orange">
+                Sign in to continue.
+              </p>
+            )}
+
             <form
               action={async () => {
                 "use server";
                 await signIn("discord");
               }}
-              className="mt-7 flex justify-center"
+              className="mt-7"
             >
-              <button className="premium-button mx-auto w-full sm:w-auto">
+              <button type="submit" className="discord-btn">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20.317 4.369A19.79 19.79 0 0 0 15.885 3c-.211.375-.444.87-.608 1.262a18.27 18.27 0 0 0-5.487 0A12.64 12.64 0 0 0 9.182 3 19.736 19.736 0 0 0 4.745 4.372C1.578 9.1.72 13.72 1.149 18.276a19.9 19.9 0 0 0 5.993 2.99c.483-.657.914-1.354 1.284-2.087a12.9 12.9 0 0 1-2.023-.967c.17-.123.336-.252.497-.384a14.25 14.25 0 0 0 11.999 0c.163.132.329.261.497.384-.646.383-1.324.71-2.026.968.37.732.8 1.429 1.284 2.086a19.83 19.83 0 0 0 5.995-2.989c.503-5.277-.838-9.855-3.532-13.907ZM8.02 15.33c-1.183 0-2.155-1.086-2.155-2.419 0-1.333.955-2.42 2.155-2.42 1.21 0 2.176 1.096 2.156 2.42 0 1.333-.947 2.419-2.156 2.419Zm7.975 0c-1.183 0-2.156-1.086-2.156-2.419 0-1.333.955-2.42 2.156-2.42 1.21 0 2.175 1.096 2.155 2.42 0 1.333-.946 2.419-2.155 2.419Z"/>
+                </svg>
                 Sign in with Discord
               </button>
             </form>
+
+            <div className="auth-divider">
+              <span className="dot" />
+              DISCORD VERIFICATION
+            </div>
           </div>
         )}
       </main>

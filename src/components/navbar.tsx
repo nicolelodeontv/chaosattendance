@@ -10,19 +10,24 @@ export async function Navbar({ guildName }: { guildName: string }) {
   const admin = await isAdmin(user?.discordId);
 
   return (
-    <header className="border-b border-line/80 bg-base/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+    <header className="relative z-10 border-b border-line bg-transparent">
+      <div className="mx-auto flex w-full items-center justify-between gap-3 px-5 py-[18px] sm:px-6">
         <Link
           href="/"
-          className="min-w-0 flex shrink items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/60"
+          className="min-w-0 flex shrink items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/40"
           aria-label="Back to attendance"
         >
-          <span
-            className="status-dot h-2 w-2 shrink-0 shadow-[0_0_14px_rgb(var(--cyan)/0.65)]"
-            style={{ backgroundColor: "rgb(var(--cyan))" }}
+          <Image
+            src="/chaos-clan-logo.jpg"
+            alt="Chaos clan logo"
+            width={30}
+            height={30}
+            priority
+            className="h-[30px] w-[30px] shrink-0 rounded-md object-cover shadow-[0_0_10px_rgba(249,115,22,0.4)]"
           />
-          <span className="min-w-0 truncate font-display text-sm tracking-tight text-ink">
-            {guildName} <span className="text-ink2">/ attendance</span>
+          <span className="min-w-0 truncate font-mono text-[13px] tracking-[0.04em] text-ink2">
+            <span className="font-semibold text-orange-soft">{guildName}</span>
+            <span className="text-ink2"> / attendance</span>
           </span>
         </Link>
 
@@ -30,7 +35,7 @@ export async function Navbar({ guildName }: { guildName: string }) {
           {admin && (
             <Link
               href="/admin"
-              className="premium-button-secondary h-8 !min-h-8 shrink-0 px-3 py-0 text-xs whitespace-nowrap"
+              className="premium-button-secondary h-8 !min-h-8 shrink-0 whitespace-nowrap px-3 py-0 text-xs"
             >
               Admin
             </Link>
@@ -46,7 +51,7 @@ export async function Navbar({ guildName }: { guildName: string }) {
                   alt={user.username}
                   width={28}
                   height={28}
-                  className="h-7 w-7 shrink-0 rounded-full border border-line shadow-sm"
+                  className="h-7 w-7 shrink-0 rounded-full border border-line"
                 />
               )}
               <span className="hidden max-w-[120px] truncate text-sm text-ink2 min-[400px]:inline">
@@ -60,7 +65,7 @@ export async function Navbar({ guildName }: { guildName: string }) {
               >
                 <button
                   type="submit"
-                  className="premium-button-secondary h-8 !min-h-8 shrink-0 px-3 py-0 text-xs whitespace-nowrap"
+                  className="premium-button-secondary h-8 !min-h-8 shrink-0 whitespace-nowrap px-3 py-0 text-xs"
                 >
                   Sign out
                 </button>
