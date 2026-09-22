@@ -13,8 +13,8 @@
   --orange-soft-hex: #FB923C;
   --ember-hex: #FF4500;
   --text-hex: #F5F1EA;
-  --text-muted-hex: #A69488;
-  --text-dim-hex: #6B5E56;
+  --text-muted-hex: #C2B7AE;
+  --text-dim-hex: #A79C93;
   --discord-hex: #5865F2;
 
   --base: 10 10 10;
@@ -22,7 +22,7 @@
   --panel2: 27 22 21;
   --line: 58 20 20;
   --ink: 245 241 234;
-  --ink2: 166 148 136;
+  --ink2: 194 183 174;
   --amber: 249 115 22;
   --cyan: 249 115 22;
   --red: 185 28 28;
@@ -38,7 +38,7 @@
   --role-admin-fg: #F5F1EA;
   --role-admin-bg: rgba(185,28,28,0.16);
   --role-admin-border: rgba(185,28,28,0.55);
-  --role-member-fg: #A69488;
+  --role-member-fg: #C2B7AE;
   --role-member-bg: rgba(58,20,20,0.32);
   --role-member-border: rgba(58,20,20,0.9);
 
@@ -440,4 +440,37 @@ textarea::placeholder {
   .discord-btn {
     transition: none;
   }
+}
+
+
+/* Accessibility/readability pass */
+body {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.text-xs {
+  font-size: 0.8125rem !important;
+  line-height: 1.4 !important;
+}
+
+.text-\\[10px\\],
+.text-\\[9px\\] {
+  font-size: 0.6875rem !important;
+  line-height: 1.3 !important;
+}
+
+.premium-button,
+.premium-button-secondary {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.auth-divider {
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.role-badge {
+  line-height: 1.25;
 }
