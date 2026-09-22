@@ -744,7 +744,10 @@ function SummaryItem({
       ].join(" ")}
     >
       <p className="text-[11px] uppercase tracking-[0.12em] text-ink2">{label}</p>
-      <p className={["mt-1.5 text-sm text-ink", multiline ? "whitespace-pre-wrap break-words leading-6" : ""].join(" ")}>
+      <p
+        className={["data-clip mt-1.5 text-sm text-ink", multiline ? "leading-6" : ""].join(" ")}
+        title={value}
+      >
         {value}
       </p>
     </div>
