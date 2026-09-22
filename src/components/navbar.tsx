@@ -10,7 +10,7 @@ export async function Navbar({ guildName }: { guildName: string }) {
   const admin = await isAdmin(user?.discordId);
 
   return (
-    <header className="relative z-10 border-b border-line bg-transparent">
+    <header className="site-header relative z-10 shrink-0 border-b border-line bg-transparent">
       <div className="mx-auto flex w-full items-center justify-between gap-3 px-5 py-[18px] sm:px-6">
         <Link
           href="/"
