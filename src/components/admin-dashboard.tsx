@@ -482,7 +482,6 @@ function SubmissionsTab({
   const [loadError, setLoadError] = useState("");
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
-  const [editingRow, setEditingRow] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -615,13 +614,11 @@ function SubmissionsTab({
   }
 
   function requestDelete(row: Submission) {
-    if (!isOwner) return;
     setDeleteTarget(row);
     setDeleteError("");
   }
 
   async function remove(id: string) {
-    if (!isOwner) return;
     setDeleteLoading(true);
     setDeleteError("");
     try {
@@ -639,7 +636,7 @@ function SubmissionsTab({
       await load({ clearNew: true });
       onSubmissionsDeleted([id]);
       setDeleteTarget(null);
-      showToast("Submission deleted");
+      showToast("Submission reset");
     } catch (err: any) {
       setDeleteError(err.message || "Unable to delete submission.");
     } finally {
@@ -925,24 +922,25 @@ function SubmissionsTab({
                 <div className="actions-cell__inner">
                   <button
                     type="button"
-                    onClick={() => { setSelected(r); setEditingRow(true); }}
+                    onClick={() => setSelected(r)}
                     className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink2 transition-colors hover:bg-cyan/5 hover:text-cyan"
-                    aria-label="Edit submission"
+                    aria-label="View submission"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m16 3 5 5L8 21H3v-5Z" /><path d="m14 5 5 5" /></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+                      <circle cx="12" cy="12" r="2.5" />
+                    </svg>
                   </button>
-                  {isOwner ? (
-                    <button
-                      type="button"
-                      onClick={() => requestDelete(r)}
-                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink2 transition-colors hover:bg-red/5 hover:text-red"
-                      aria-label="Delete submission"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <button
+                    type="button"
+                    onClick={() => requestDelete(r)}
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink2 transition-colors hover:bg-red/5 hover:text-red"
+                    aria-label="Reset submission"
+                  >
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 6h18M8 6V4a1 1 0 0 1 1 1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
                       </svg>
-                    </button>
-                  ) : null}
+                  </button>
                 </div>
               </td>
             </tr>
@@ -1003,10 +1001,10 @@ function SubmissionsTab({
       </ConfirmDialog>
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Delete submission?"
+        title="Reset submission?"
         message={
           <>
-            <strong className="font-medium text-ink">{deleteTarget?.ign}</strong> will be able to submit again.
+            <strong className="font-medium text-ink">{deleteTarget?.ign}</strong> will be able to submit again. The reset is recorded with the admin account and time.
             {deleteError && (
               <div className="mt-3 rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
                 {deleteError}
@@ -1022,13 +1020,10 @@ function SubmissionsTab({
       {selected ? (
         <SubmissionDetailModal
           selected={selected}
-          editing={editingRow}
-          onClose={() => { setSelected(null); setEditingRow(false); }}
-          onEdit={() => setEditingRow(true)}
-          onSaved={async (updated) => {
-            setSelected(updated);
-            setEditingRow(false);
-            await load();
+          onClose={() => setSelected(null)}
+          onReset={() => {
+            setSelected(null);
+            requestDelete(selected);
           }}
         />
       ) : null}
@@ -1039,254 +1034,93 @@ function SubmissionsTab({
 
 function SubmissionDetailModal({
   selected,
-  editing,
   onClose,
-  onEdit,
-  onSaved,
+  onReset,
 }: {
   selected: Submission;
-  editing: boolean;
   onClose: () => void;
-  onEdit: () => void;
-  onSaved: (submission: Submission) => void | Promise<void>;
+  onReset: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [pendingSaved, setPendingSaved] = useState<Submission | null>(null);
-  const [ign, setIgn] = useState(selected.ign);
-  const [attending, setAttending] = useState(selected.attending);
-  const [hasPilot, setHasPilot] = useState(selected.hasPilot);
-  const [pilotName, setPilotName] = useState(selected.pilotName ?? "");
-  const [hours, setHours] = useState(String(selected.hours));
-  const [notes, setNotes] = useState(selected.notes ?? "");
-
-  useEffect(() => {
-    setError("");
-    setIgn(selected.ign);
-    setAttending(selected.attending);
-    setHasPilot(selected.hasPilot);
-    setPilotName(selected.pilotName ?? "");
-    setHours(String(selected.hours));
-    setNotes(selected.notes ?? "");
-  }, [selected]);
-
-  async function save() {
-    setSaving(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/admin/submissions/${selected.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ign, attending, hasPilot, pilotName, hours: Number(hours), notes }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Unable to update submission.");
-      setPendingSaved(data.submission);
-      setSuccessOpen(true);
-      void onSaved(data.submission);
-    } catch (err: any) {
-      setError(err.message || "Unable to update submission.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function closeSuccess() {
-    setSuccessOpen(false);
-    setPendingSaved(null);
-  }
 
   return (
-    <>
-      <SuccessDialog
-        open={successOpen}
-        title="Submission updated"
-        message={
-          <>
-            <strong className="font-semibold text-ink">{pendingSaved?.ign ?? selected.ign}</strong>'s response has been saved.
-          </>
-        }
-        onClose={closeSuccess}
-      />
-
-      <BaseModal
-        open={true}
-        title={selected.ign}
-        titleId="submission-detail-title"
-        onClose={onClose}
-        initialFocusRef={closeRef}
-        cardClassName="!max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto p-6 shadow-2xl sm:p-7"
-        beforeTitle={
-          <div className="flex items-start justify-between gap-4">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-cyan">
-              {editing ? "Edit submission" : "Submission detail"}
-            </p>
-            <button
-              ref={closeRef}
-              type="button"
-              onClick={onClose}
-              className="icon-button"
-              aria-label="Close submission detail dialog"
-            >
-              ×
-            </button>
-          </div>
-        }
-      >
-        {editing ? (
-          <div className="mt-6 space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="admin-edit-ign" className="text-sm font-medium text-ink">IGN</label>
-              <input
-                id="admin-edit-ign"
-                type="text"
-                required
-                value={ign}
-                onChange={(e) => setIgn(e.target.value)}
-              />
-            </div>
-            <fieldset>
-              <legend className="mb-2.5 text-sm font-medium text-ink">Attendance</legend>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button type="button" onClick={() => setAttending(true)} className={[`premium-toggle`, attending ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Attending</button>
-                <button type="button" onClick={() => setAttending(false)} className={[`premium-toggle`, !attending ? `border-red bg-red/10 text-red` : ` `].join(" ")}>Not Attending</button>
-              </div>
-            </fieldset>
-            <fieldset>
-              <legend className="mb-2.5 text-sm font-medium text-ink">Pilot</legend>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button type="button" onClick={() => setHasPilot(true)} className={[`premium-toggle`, hasPilot ? `border-cyan bg-cyan/10 text-cyan` : ` `].join(" ")}>Have Pilot</button>
-                <button type="button" onClick={() => setHasPilot(false)} className={[`premium-toggle`, !hasPilot ? `border-red bg-red/10 text-red` : ` `].join(" ")}>No Pilot</button>
-              </div>
-            </fieldset>
-            {hasPilot && (
-              <div className="space-y-2">
-                <label htmlFor="admin-edit-pilot-name" className="text-sm font-medium text-ink">Pilot Name</label>
-                <input
-                  id="admin-edit-pilot-name"
-                  type="text"
-                  required
-                  value={pilotName}
-                  onChange={(e) => setPilotName(e.target.value)}
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <label htmlFor="admin-edit-hours" className="text-sm font-medium text-ink">Hours</label>
-              <input
-                id="admin-edit-hours"
-                type="number"
-                step="0.5"
-                min="0"
-                required
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="admin-edit-notes" className="text-sm font-medium text-ink">
-                Notes <span className="font-normal text-ink2">(optional)</span>
-              </label>
-              <textarea
-                id="admin-edit-notes"
-                rows={3}
-                value={notes}
-                onChange={(e) => {
-                  setNotes(e.target.value);
-                  e.currentTarget.style.height = "auto";
-                  e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                }}
-                style={{ resize: "none", overflow: "hidden" }}
-              />
-            </div>
-            {error && (
-              <div className="rounded-md border border-red/30 bg-red/5 px-3 py-2.5 text-sm text-red" role="alert" aria-live="assertive">
-                {error}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button type="button" onClick={onClose} className="premium-button-secondary flex-1">Cancel</button>
-              <button type="button" onClick={save} disabled={saving} className="premium-button flex-1 disabled:cursor-not-allowed disabled:opacity-50">
-                {saving ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <SubmissionDetailBody selected={selected} />
-            <button type="button" onClick={onEdit} className="premium-button mt-5 w-full">Edit submission</button>
-          </>
-        )}
-      </BaseModal>
-    </>
-  );
-}
-
-function SubmissionDetailBody({ selected }: { selected: Submission }) {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [avatarLoading, setAvatarLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    setAvatarLoading(true);
-    setAvatarUrl(null);
-    fetch(`/api/admin/discord-avatar?discordId=${encodeURIComponent(selected.discordId)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (active) setAvatarUrl(data.avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png");
-      })
-      .catch(() => {
-        if (active) setAvatarUrl("https://cdn.discordapp.com/embed/avatars/0.png");
-      })
-      .finally(() => {
-        if (active) setAvatarLoading(false);
-      });
-    return () => { active = false; };
-  }, [selected.discordId]);
-
-  return (
-    <>
-      <div className="mt-5 flex flex-col items-center text-center">
-        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-line bg-panel2">
-          {avatarLoading ? <div className="h-full w-full animate-pulse bg-panel2" aria-label="Loading Discord avatar" /> : <img src={avatarUrl ?? "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="h-full w-full object-cover" /> }
+    <BaseModal
+      open={true}
+      title={selected.ign}
+      titleId="submission-detail-title"
+      onClose={onClose}
+      initialFocusRef={closeRef}
+      cardClassName="!max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto p-6 shadow-2xl sm:p-7"
+      beforeTitle={
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-cyan">
+            Submission detail
+          </p>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            className="icon-button"
+            aria-label="Close submission detail dialog"
+          >
+            ×
+          </button>
         </div>
-        <p className="mt-3 font-medium text-ink">{selected.discordUsername}</p>
-      </div>
+      }
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="premium-button-secondary"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            className="inline-flex min-h-[42px] items-center justify-center rounded-[10px] border border-red/70 bg-red/5 px-4 text-sm font-semibold text-red transition-colors hover:border-red hover:bg-red/10"
+          >
+            Reset submission
+          </button>
+        </>
+      }
+    >
+      <p className="mt-3 text-sm leading-6 text-ink2">
+        This response is final. Resetting it removes the current submission, records
+        the reset, and allows the member to submit again.
+      </p>
+
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">IGN</p><p className="mt-1.5 text-sm text-ink">{selected.ign}</p></div>
-        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Attendance</p><p className="mt-1.5 text-sm text-ink">{selected.attending ? "Attending" : "Not Attending"}</p></div>
-        <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot</p><p className="mt-1.5 text-sm text-ink">{selected.hasPilot ? "Have Pilot" : "No Pilot"}</p></div>
-        {selected.hasPilot && <div className="rounded-lg border border-line bg-panel2/60 p-3"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Pilot Name</p><p className="mt-1.5 text-sm text-ink">{selected.pilotName ?? "—"}</p></div>}
-        <div className="rounded-lg border border-line bg-panel2/60 p-3 sm:col-span-2"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Hours</p><p className="mt-1.5 text-sm text-ink">{selected.hours}</p></div>
-        <div className="rounded-lg border border-line bg-panel2/60 p-3 sm:col-span-2"><p className="text-xs uppercase tracking-[0.12em] text-ink2">Submitted</p><p className="mt-1.5 text-sm text-ink">{new Date(selected.createdAt).toLocaleString()}</p></div>
+        <SummaryItem label="IGN" value={selected.ign} />
+        <SummaryItem
+          label="Attendance"
+          value={selected.attending ? "Attending" : "Not Attending"}
+        />
+        <SummaryItem
+          label="Pilot"
+          value={selected.hasPilot ? "Have Pilot" : "No Pilot"}
+          fullWidth={!selected.hasPilot}
+        />
+        {selected.hasPilot ? (
+          <SummaryItem label="Pilot Name" value={selected.pilotName || "—"} />
+        ) : null}
+        <SummaryItem label="Hours" value={`${selected.hours} hrs`} fullWidth />
+        <SummaryItem
+          label="Submitted"
+          value={new Date(selected.createdAt).toLocaleString("en-PH")}
+          fullWidth
+        />
+        <SummaryItem
+          label="Notes"
+          value={selected.notes || "—"}
+          fullWidth
+          multiline
+        />
       </div>
-      <div className="mt-3 rounded-lg border border-line bg-panel2/60 p-4">
-        <p className="text-xs uppercase tracking-[0.12em] text-ink2">Notes</p>
-        <p
-          className="data-clip mt-2 text-sm leading-6 text-ink"
-          title={selected.notes ?? "—"}
-        >
-          {selected.notes ?? "—"}
-        </p>
-      </div>
-    </>
+    </BaseModal>
   );
 }
-
-function Badge({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
-  return (
-    <span className={["inline-flex items-center gap-1.5", ok ? "text-cyan" : "text-red"].join(" ")}>
-      <span
-        className="status-dot"
-        style={{ backgroundColor: ok ? "rgb(var(--cyan))" : "rgb(var(--red))" }}
-      />
-      {ok ? yes : no}
-    </span>
-  );
-}
-
 
 function PaginationControls({
   page,
