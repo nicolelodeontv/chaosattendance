@@ -1,9 +1,14 @@
 import { auth } from "@/auth";
+import type { Metadata } from "next";
 import { isAdmin, isOwner } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { Navbar } from "@/components/navbar";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Admin",
+};
 
 export default async function AdminPage() {
   const session = await auth();
