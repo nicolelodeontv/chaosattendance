@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isOwner } from "@/lib/admin";
+import { isAdmin } from "@/lib/admin";
 import { logServerError } from "@/lib/server-error";
 
 function isMissingArchiveTable(error: unknown): boolean {
@@ -12,7 +12,10 @@ function isMissingArchiveTable(error: unknown): boolean {
   );
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
   const session = await auth();
   const user = session?.user as any;
 
@@ -20,7 +23,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  if (!isOwner({ discordId: user?.discordId })) {
+  if (!(await isAdmin(user?.discordId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -30,7 +33,10 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
     }
 
     try {
@@ -56,37 +62,39 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
         await tx.submission.delete({ where: { id: params.id } });
       });
     } catch (archiveError) {
-      if (!isMissingArchiveTable(archiveError)) {
-        throw archiveError;
+      if (isMissingArchiveTable(archiveError)) {
+        return NextResponse.json(
+          {
+            code: "ARCHIVE_NOT_SET_UP",
+            error:
+              "Submission reset is unavailable until the archive table is created.",
+          },
+          { status: 503 }
+        );
       }
-
-      logServerError(
-        "DeletedSubmission archive table is missing; deleting without archive.",
-        archiveError
-      );
-      try {
-        await prisma.submission.delete({ where: { id: params.id } });
-      } catch (deleteError) {
-        if (
-          deleteError instanceof Prisma.PrismaClientKnownRequestError &&
-          deleteError.code === "P2025"
-        ) {
-          return NextResponse.json({ error: "Submission not found" }, { status: 404 });
-        }
-        throw deleteError;
-      }
+      throw archiveError;
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      reset: true,
+      resetByDiscordId: user.discordId.trim(),
+    });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2025"
     ) {
-      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
     }
 
-    logServerError("Failed to delete submission", error);
-    return NextResponse.json({ error: "Unable to delete submission." }, { status: 500 });
+    logServerError("Failed to reset submission", error);
+    return NextResponse.json(
+      { error: "Unable to reset submission." },
+      { status: 500 }
+    );
   }
 }
