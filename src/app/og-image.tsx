@@ -1,14 +1,7 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { CHAOS_LOGO_SRC } from "./og-logo";
 
-export async function createOgImageResponse() {
-  const logoData = await readFile(
-    join(process.cwd(), "public/chaos-clan-logo.jpg"),
-    "base64"
-  );
-  const logoSrc = `data:image/jpeg;base64,${logoData}`;
-
+export function createOgImageResponse() {
   return new ImageResponse(
     (
       <div
@@ -39,7 +32,7 @@ export async function createOgImageResponse() {
           }}
         >
           <img
-            src={logoSrc}
+            src={CHAOS_LOGO_SRC}
             width="230"
             height="230"
             style={{ objectFit: "cover", borderRadius: 20 }}

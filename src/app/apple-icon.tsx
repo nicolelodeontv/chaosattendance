@@ -1,21 +1,14 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { CHAOS_LOGO_SRC } from "./og-logo";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const size = {
   width: 180,
   height: 180,
 };
 export const contentType = "image/png";
 
-export default async function AppleIcon() {
-  const logoData = await readFile(
-    join(process.cwd(), "public/chaos-clan-logo.jpg"),
-    "base64"
-  );
-  const logoSrc = `data:image/jpeg;base64,${logoData}`;
-
+export default function AppleIcon() {
   return new ImageResponse(
     (
       <div
@@ -31,7 +24,7 @@ export default async function AppleIcon() {
         }}
       >
         <img
-          src={logoSrc}
+          src={CHAOS_LOGO_SRC}
           width="180"
           height="180"
           style={{ objectFit: "cover" }}
