@@ -109,11 +109,17 @@ export async function POST(req: Request) {
         throw archiveError;
       }
 
-      logServerError(
-        "DeletedSubmission archive table is missing; deleting without archive.",
-        archiveError
-      );
-      await prisma.submission.deleteMany({ where: { id: { in: rowIds } } });
+      if (isMissingArchiveTable(archiveError)) {
+        return NextResponse.json(
+          {
+            code: "ARCHIVE_NOT_SET_UP",
+            error:
+              "Bulk reset is unavailable until the archive table is created.",
+          },
+          { status: 503 }
+        );
+      }
+      throw archiveError;
     }
 
     return NextResponse.json({ ok: true, deleted: rows.length });
