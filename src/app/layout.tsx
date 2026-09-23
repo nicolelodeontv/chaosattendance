@@ -61,10 +61,6 @@ export const metadata: Metadata = {
     description: siteDescription,
     images: ["/twitter-image"],
   },
-  icons: {
-    icon: [{ url: "/icon.jpg", type: "image/jpeg", sizes: "256x256" }],
-    apple: [{ url: "/apple-icon.jpg", type: "image/jpeg", sizes: "256x256" }],
-  },
 };
 
 export const viewport: Viewport = {

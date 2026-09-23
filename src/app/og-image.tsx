@@ -1,9 +1,13 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 export async function createOgImageResponse() {
-  const logoData = await fetch(
-    new URL("../../public/chaos-clan-logo.jpg", import.meta.url)
-  ).then((res) => res.arrayBuffer());
+  const logoData = await readFile(
+    join(process.cwd(), "public/chaos-clan-logo.jpg"),
+    "base64"
+  );
+  const logoSrc = `data:image/jpeg;base64,${logoData}`;
 
   return new ImageResponse(
     (
@@ -35,7 +39,7 @@ export async function createOgImageResponse() {
           }}
         >
           <img
-            src={logoData}
+            src={logoSrc}
             width="230"
             height="230"
             style={{ objectFit: "cover", borderRadius: 20 }}
@@ -62,7 +66,14 @@ export async function createOgImageResponse() {
               marginBottom: 26,
             }}
           >
-            <span style={{ width: 12, height: 12, borderRadius: 999, background: "#FF4500" }} />
+            <span
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 999,
+                background: "#FF4500",
+              }}
+            />
             CHAOS
           </div>
 
