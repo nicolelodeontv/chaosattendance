@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
+import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -13,6 +14,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: { strategy: "jwt" },
   callbacks: {
+    async signIn({ profile }) {
+      const discordId =
+        typeof (profile as any)?.id === "string"
+          ? (profile as any).id.trim()
+          : "";
+
+      if (!discordId) return false;
+
+      const membership = await checkDiscordGuildMembership(discordId);
+      return membership === "member";
+    },
     async jwt({ token, profile }) {
       if (profile) {
         token.discordId = (profile as any).id;
