@@ -1,6 +1,5 @@
 import { auth, signIn } from "@/auth";
 import type { Metadata } from "next";
-import { getRole } from "@/lib/admin";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
 import { prisma } from "@/lib/prisma";
