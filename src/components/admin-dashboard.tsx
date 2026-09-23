@@ -1122,6 +1122,51 @@ function SubmissionDetailModal({
   );
 }
 
+function Badge({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
+  return (
+    <span className={["inline-flex items-center gap-1.5", ok ? "text-cyan" : "text-red"].join(" ")}>
+      <span
+        className="status-dot"
+        style={{ backgroundColor: ok ? "rgb(var(--cyan))" : "rgb(var(--red))" }}
+      />
+      {ok ? yes : no}
+    </span>
+  );
+}
+
+function SummaryItem({
+  label,
+  value,
+  fullWidth = false,
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  fullWidth?: boolean;
+  multiline?: boolean;
+}) {
+  return (
+    <div
+      className={[
+        "rounded-md border border-line bg-panel2/50 p-3",
+        fullWidth ? "sm:col-span-2" : "",
+      ].join(" ")}
+    >
+      <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink2">
+        {label}
+      </p>
+      <p
+        className={[
+          "mt-1.5 text-sm text-ink",
+          multiline ? "whitespace-pre-wrap break-words" : "truncate",
+        ].join(" ")}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function PaginationControls({
   page,
   pageCount,
