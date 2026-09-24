@@ -1,9 +1,5 @@
 export type DiscordMembershipStatus = "member" | "not_member" | "unavailable";
 
-interface DiscordGuild {
-  id: string;
-}
-
 export async function checkDiscordGuildMembership(
   discordId: string,
   accessToken?: string
@@ -22,12 +18,15 @@ export async function checkDiscordGuildMembership(
 
   try {
     const response = accessToken
-      ? await fetch("https://discord.com/api/v10/users/@me/guilds", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          cache: "no-store",
-        })
+      ? await fetch(
+          `https://discord.com/api/v10/users/@me/guilds/${guildId}/member`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            cache: "no-store",
+          }
+        )
       : await fetch(
           `https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`,
           {
@@ -38,19 +37,13 @@ export async function checkDiscordGuildMembership(
           }
         );
 
-    if (response.ok) {
-      if (!accessToken) return "member";
+    if (response.ok) return "member";
 
-      const guilds = (await response.json()) as DiscordGuild[];
-      return guilds.some((guild) => guild.id === guildId)
-        ? "member"
-        : "not_member";
-    }
-
-    if (!accessToken && response.status === 404) return "not_member";
+    if (response.status === 404) return "not_member";
 
     console.error(
       "Discord guild membership check failed:",
+      accessToken ? "oauth" : "bot",
       response.status,
       response.statusText
     );
