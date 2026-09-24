@@ -2,9 +2,54 @@ import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
 import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 
+const authSecret =
+  process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim();
+
+const discordClientId =
+  process.env.AUTH_DISCORD_ID?.trim() ||
+  process.env.DISCORD_CLIENT_ID?.trim() ||
+  process.env.DISCORD_ID?.trim();
+
+const discordClientSecret =
+  process.env.AUTH_DISCORD_SECRET?.trim() ||
+  process.env.DISCORD_CLIENT_SECRET?.trim() ||
+  process.env.DISCORD_SECRET?.trim();
+
+function logAuthError(error: unknown) {
+  if (error instanceof Error) {
+    console.error(`[auth][error] ${error.name}: ${error.message}`);
+    if (error.cause instanceof Error) {
+      console.error(`[auth][cause] ${error.cause.name}: ${error.cause.message}`);
+    }
+    if (error.stack) console.error(error.stack);
+    return;
+  }
+
+  console.error("[auth][error]", error);
+}
+
+const missingConfig = [
+  !authSecret && "AUTH_SECRET",
+  !discordClientId && "AUTH_DISCORD_ID",
+  !discordClientSecret && "AUTH_DISCORD_SECRET",
+].filter(Boolean);
+
+if (missingConfig.length > 0) {
+  console.error(
+    `[auth][config] Missing required auth env vars: ${missingConfig.join(", ")}`
+  );
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  debug: true,
+  logger: {
+    error: logAuthError,
+  },
+  secret: authSecret,
   providers: [
     Discord({
+      clientId: discordClientId,
+      clientSecret: discordClientSecret,
       authorization: {
         params: {
           scope: "identify",
@@ -48,5 +93,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   pages: {
     signIn: "/",
+    error: "/auth/error",
   },
 });
