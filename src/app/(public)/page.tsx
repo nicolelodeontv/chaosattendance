@@ -1,6 +1,5 @@
 import { auth, signIn } from "@/auth";
 import type { Metadata } from "next";
-import { getRole } from "@/lib/admin";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
 import { prisma } from "@/lib/prisma";
@@ -18,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: { authRequired?: string };
+  searchParams: { authRequired?: string; error?: string };
 }) {
   const session = await auth();
   const settings = await prisma.settings
@@ -28,13 +27,6 @@ export default async function Home({
   const currentOpId = settings?.currentOpId?.trim() || "current";
   const user = session?.user as any;
   const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
-
-  let role: "owner" | "admin" | "member" = "member";
-  try {
-    role = await getRole(discordId);
-  } catch {
-    role = "member";
-  }
 
   const ownSubmission = discordId
     ? await prisma.submission.findUnique({
@@ -126,7 +118,6 @@ export default async function Home({
                       }
                     : null
                 }
-                role={role}
               />
             </div>
           </div>
@@ -158,6 +149,12 @@ export default async function Home({
                 </p>
               )}
 
+              {searchParams.error === "AccessDenied" && (
+                <p className="mb-0 mt-4 rounded-md border border-red/30 bg-red/5 px-3 py-2 text-sm text-red">
+                  You must be a member of the Chaos Discord server to sign in.
+                </p>
+              )}
+
               <form
                 action={async () => {
                   "use server";
@@ -175,8 +172,7 @@ export default async function Home({
 
               <p className="mx-auto mt-3 max-w-[48ch] text-xs leading-5 text-ink2">
                 Discord requests only the <span className="font-mono text-ink">identify</span> scope.
-                We store your Discord ID, username, avatar, IGN, attendance, and the attendance
-                details you submit.
+                We store your Discord ID, username, IGN, attendance, pilot status, hours, and notes.
               </p>
 
               <div className="auth-divider">

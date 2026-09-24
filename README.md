@@ -2,7 +2,7 @@
 
 A squadron/guild attendance tracker: members sign in with Discord, submit their IGN,
 attendance, pilot status and hours, and every submission can be posted to a Discord
-channel via webhook. Admins can view, filter, edit, export and manage attendance.
+channel via webhook. Admins can view, filter, reset, export and manage attendance.
 
 Built with Next.js 14 (App Router), Auth.js (Discord OAuth), Prisma + PostgreSQL,
 and Tailwind. Light and dark mode are supported.
@@ -26,6 +26,8 @@ secrets.
 | `NEXTAUTH_URL` | Application URL |
 | `AUTH_DISCORD_ID` | Discord OAuth client ID |
 | `AUTH_DISCORD_SECRET` | Discord OAuth client secret |
+| `DISCORD_GUILD_ID` | Chaos Discord server ID used for membership verification |
+| `DISCORD_BOT_TOKEN` | Server-side Discord bot token used for membership verification |
 | `OWNER_DISCORD_ID` | Discord ID that receives owner access |
 | `DISCORD_WEBHOOK_URL` | Default Discord notification webhook |
 
@@ -74,18 +76,22 @@ Owner recognition is enforced server-side.
 Additional admins can work with the submission log and notifications, including:
 
 - View and filter submissions
+- Reset submissions
 - Export submissions
-- Edit submissions
 - View admin notifications
 
-They do not receive owner-only Settings, Access, delete, bulk-delete, or Recently
+They do not receive owner-only Settings, Access, bulk-delete, or Recently
 Removed/restore controls.
 
 ### Members
 
-Regular members sign in with Discord and can submit attendance for the current
-operation. A member's submission is scoped by the current operation ID and Discord
-user ID, so the same account cannot submit twice for the same operation.
+Regular members must belong to the Chaos Discord server. Membership is verified
+server-side during Discord sign-in and checked again when an attendance submission
+is posted.
+
+Each member can submit only once for the current operation. Submissions are final;
+regular users have no update or delete path. A member who needs a correction must
+ask an authorized admin to reset the submission.
 
 ## Submission locking
 
@@ -95,8 +101,8 @@ database enforces a unique combination of `opId` + `discordId`.
 The server checks the lock as well as the database constraint. A duplicate member
 submission returns HTTP 409, and the public form shows the locked response state.
 
-Admin editing remains available by submission ID for authorized admins. Owner
-deletion removes the stored submission so a corrected response can be submitted.
+The reset path archives the original submission with the resetting admin's Discord ID
+and reset timestamp before deleting it, allowing the member to submit again.
 
 ## Recently removed archive
 
@@ -205,3 +211,11 @@ area. Webhook values are kept server-side.
   secrets out of source control.
 - Server-side APIs enforce the relevant owner/admin/member rules even when a client
   hides a control.
+
+
+## Discord membership verification
+
+The OAuth flow requests only the `identify` scope. The app does not request the
+`guilds` or `guilds.members.read` user scopes. Instead, the server uses a Discord
+bot token to check whether the authenticated Discord user is a member of the configured
+Chaos guild. The bot token stays server-side and is never accepted from the browser.

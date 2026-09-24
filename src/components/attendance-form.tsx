@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SuccessDialog } from "@/components/success-dialog";
-import type { UserRole } from "@/types/roles";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type FieldName = "ign" | "attending" | "hasPilot" | "pilotName" | "hours";
 type FieldErrors = Partial<Record<FieldName, string>>;
@@ -34,8 +34,7 @@ const MAX_NOTES_LENGTH = 500;
 const MAX_IGN_LENGTH = 64;
 const MAX_PILOT_NAME_LENGTH = 64;
 
-const MEMBER_LOCK_ERROR =
-  "You've already submitted for this op. Ask an admin if something needs to change.";
+const DUPLICATE_SUBMISSION_ERROR = "You've already submitted for this op.";
 const DUPLICATE_IGN_ERROR =
   "That IGN is already used by another submission.";
 
@@ -91,13 +90,10 @@ function initialChoice(value: boolean | undefined, fallback: Choice = ""): Choic
 
 export function AttendanceForm({
   initialSubmission,
-  role,
 }: {
   initialSubmission: InitialSubmission | null;
-  role: UserRole;
 }) {
   const router = useRouter();
-  const canEdit = role !== "member";
 
   const [submission, setSubmission] = useState<Submission | null>(initialSubmission);
   const [showForm, setShowForm] = useState(!initialSubmission);
@@ -116,6 +112,7 @@ export function AttendanceForm({
   const [error, setError] = useState("");
   const [successOpen, setSuccessOpen] = useState(false);
   const [successTitle, setSuccessTitle] = useState("Attendance submitted");
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({
     ign: false,
     attending: false,
@@ -199,28 +196,6 @@ export function AttendanceForm({
     });
     if (value === "no") setPilotName("");
     clearFailure();
-  }
-
-  function editExistingSubmission() {
-    if (!submission || !canEdit) return;
-    setIgn(submission.ign);
-    setAttending(initialChoice(submission.attending));
-    setHasPilot(initialChoice(submission.hasPilot));
-    setPilotName(submission.pilotName ?? "");
-    setHours(String(submission.hours));
-    setNotes(submission.notes ?? "");
-    setTouched({
-      ign: false,
-      attending: false,
-      hasPilot: false,
-      pilotName: false,
-      hours: false,
-    });
-    setFieldErrors({});
-    setFailureKind(null);
-    setError("");
-    setStatus("idle");
-    setShowForm(true);
   }
 
   function focusFirstInvalid(errors: FieldErrors) {
@@ -316,10 +291,11 @@ export function AttendanceForm({
         return;
       }
 
-      if (res.status === 409 && data.error === MEMBER_LOCK_ERROR) {
+      if (res.status === 409 && data.error === DUPLICATE_SUBMISSION_ERROR) {
+        setConfirmOpen(false);
         setStatus("error");
         setFailureKind("lock");
-        setError(MEMBER_LOCK_ERROR);
+        setError(DUPLICATE_SUBMISSION_ERROR);
         router.refresh();
         return;
       }
@@ -347,7 +323,8 @@ export function AttendanceForm({
       setStatus("idle");
       setError("");
       setFailureKind(null);
-      setSuccessTitle(data.created ? "Attendance submitted" : "Attendance updated");
+      setConfirmOpen(false);
+      setSuccessTitle("Attendance submitted");
       setSuccessOpen(true);
       router.refresh();
     } catch {
@@ -361,7 +338,7 @@ export function AttendanceForm({
     e.preventDefault();
     if (status === "submitting") return;
     if (!validateForm()) return;
-    await sendSubmission();
+    setConfirmOpen(true);
   }
 
   const progress = useMemo(() => {
@@ -393,17 +370,24 @@ export function AttendanceForm({
   }, [attending, hasPilot, pilotName, hours]);
 
   if (submission && !showForm) {
-    return (
-      <ReadOnlySubmissionCard
-        submission={submission}
-        canEdit={canEdit}
-        onEdit={editExistingSubmission}
-      />
-    );
+    return <ReadOnlySubmissionCard submission={submission} />;
   }
 
   return (
     <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirm attendance submission"
+        message="Submissions are final. Confirm your IGN, attendance and pilot status."
+        confirmLabel="Confirm submission"
+        cancelLabel="Review"
+        variant="default"
+        loading={status === "submitting"}
+        onConfirm={() => void sendSubmission()}
+        onCancel={() => {
+          if (status !== "submitting") setConfirmOpen(false);
+        }}
+      />
       <SuccessDialog
         open={successOpen}
         title={successTitle}
@@ -424,7 +408,7 @@ export function AttendanceForm({
         <div className="mb-6 flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">
-              {submission ? "Edit response" : "Your response"}
+              Your response
             </p>
             <p className="text-sm leading-6 text-ink2">
               Complete the fields below.
@@ -656,8 +640,6 @@ export function AttendanceForm({
               <Spinner />
               <span>Submitting…</span>
             </>
-          ) : submission ? (
-            "Save response"
           ) : (
             "Submit attendance"
           )}
@@ -669,12 +651,8 @@ export function AttendanceForm({
 
 function ReadOnlySubmissionCard({
   submission,
-  canEdit,
-  onEdit,
 }: {
   submission: Submission;
-  canEdit: boolean;
-  onEdit: () => void;
 }) {
   return (
     <div className="premium-card p-5 sm:p-7" aria-live="polite">
@@ -684,29 +662,20 @@ function ReadOnlySubmissionCard({
             <span className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-panel2 text-ink2" aria-hidden="true">
               <LockIcon />
             </span>
-            <p className="font-display text-lg text-ink">Response submitted</p>
+            <p className="font-display text-lg text-ink">Submitted</p>
           </div>
           <p className="mt-2 text-sm leading-6 text-ink2">
-            {canEdit
-              ? "Your response is saved for this op. You can edit your own response below."
-              : "Submitted. Only an admin can change this."}
+            Submissions are final. Contact an officer if you made a mistake.
           </p>
         </div>
-
-        {canEdit ? (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="premium-button w-full shrink-0 sm:w-auto"
-          >
-            Edit response
-          </button>
-        ) : null}
       </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <SummaryItem label="IGN" value={submission.ign} />
-        <SummaryItem label="Attendance" value={submission.attending ? "Attending" : "Not Attending"} />
+        <SummaryItem
+          label="Attendance"
+          value={submission.attending ? "Attending" : "Not Attending"}
+        />
         <SummaryItem
           label="Pilot"
           value={submission.hasPilot ? "Have Pilot" : "No Pilot"}
@@ -716,11 +685,18 @@ function ReadOnlySubmissionCard({
           <SummaryItem label="Pilot Name" value={submission.pilotName || "—"} />
         ) : null}
         <SummaryItem label="Hours" value={`${submission.hours} hrs`} fullWidth />
-        <SummaryItem label="Submitted" value={formatSubmittedAt(submission.createdAt)} fullWidth />
-        <SummaryItem label="Notes" value={submission.notes || "—"} fullWidth multiline />
+        <SummaryItem
+          label="Submitted"
+          value={formatSubmittedAt(submission.createdAt)}
+          fullWidth
+        />
+        <SummaryItem
+          label="Notes"
+          value={submission.notes || "—"}
+          fullWidth
+          multiline
+        />
       </div>
-
-
     </div>
   );
 }
