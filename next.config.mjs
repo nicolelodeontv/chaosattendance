@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["next-auth"],
   experimental: {
     staleTimes: {
       dynamic: 0,
