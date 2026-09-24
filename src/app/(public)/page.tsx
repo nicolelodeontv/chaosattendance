@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
 import { prisma } from "@/lib/prisma";
+import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +29,12 @@ export default async function Home({
   const currentOpId = settings?.currentOpId?.trim() || "current";
   const user = session?.user as any;
   const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+  const membership = session?.user && discordId
+    ? await checkDiscordGuildMembership(discordId)
+    : null;
+  const isChaosMember = membership === "member";
 
-  const ownSubmission = discordId
+  const ownSubmission = isChaosMember
     ? await prisma.submission.findUnique({
         where: {
           opId_discordId: {
@@ -63,6 +68,7 @@ export default async function Home({
         ].join(" ")}
       >
         {session?.user ? (
+          isChaosMember ? (
           <div>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
@@ -122,6 +128,19 @@ export default async function Home({
               />
             </div>
           </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="premium-card mx-auto w-full max-w-[460px] px-8 pb-8 pt-10 text-center">
+                <h1 className="font-display text-[22px] font-bold tracking-[0.2px] text-ink">
+                  Join the Chaos Discord server
+                </h1>
+                <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-[1.5] text-ink2">
+                  Your Discord account is signed in, but it is not a member of the Chaos Discord server.
+                  Join the server to access attendance reporting.
+                </p>
+              </div>
+            </div>
+          )
         ) : (
           <div className="flex items-center justify-center py-8">
             <div className="premium-card mx-auto w-full max-w-[380px] px-8 pb-8 pt-10 text-center">
