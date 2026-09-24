@@ -17,8 +17,6 @@ function isMissingArchiveTable(error: unknown): boolean {
 export async function GET() {
   const session = await auth();
   const user = session?.user as any;
-  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
-
   if (!session) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
