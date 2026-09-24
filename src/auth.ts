@@ -1,7 +1,5 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
-// Force a fresh Vercel Preview deployment after OAuth diagnostics.
-import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 
 const authSecret =
   process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim();
@@ -82,39 +80,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         url: "https://discord.com/api/oauth2/authorize",
         params: {
-          scope: "identify guilds.members.read",
+          scope: "identify",
         },
       },
     }),
   ],
   session: { strategy: "jwt" },
   callbacks: {
-    async signIn({ profile, account }) {
+    async signIn({ profile }) {
       const discordId =
         typeof (profile as any)?.id === "string"
           ? (profile as any).id.trim()
           : "";
-      const accessToken =
-        typeof account?.access_token === "string"
-          ? account.access_token.trim()
-          : "";
 
-      if (!discordId || !accessToken) return false;
-
-      const membership = await checkDiscordGuildMembership(
-        discordId,
-        accessToken
-      );
+      if (!discordId) return false;
 
       console.info(
-        "[auth] Discord membership decision:",
-        "hasAccessToken=",
-        Boolean(accessToken),
-        "result=",
-        membership
+        "[auth] Discord OAuth sign-in accepted; guild membership is enforced on attendance submission."
       );
 
-      return membership === "member";
+      return true;
     },
     async jwt({ token, profile }) {
       if (profile) {
