@@ -104,6 +104,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         discordId,
         accessToken
       );
+
+      console.info(
+        "[auth] Discord membership decision:",
+        "hasAccessToken=",
+        Boolean(accessToken),
+        "result=",
+        membership
+      );
+
       return membership === "member";
     },
     async jwt({ token, profile }) {
