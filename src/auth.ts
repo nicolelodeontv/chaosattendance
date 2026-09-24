@@ -82,7 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         url: "https://discord.com/api/oauth2/authorize",
         params: {
-          scope: "identify guilds",
+          scope: "identify guilds.members.read",
         },
       },
     }),
