@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
+// Force a fresh Vercel Preview deployment after OAuth diagnostics.
 import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 
 const authSecret =
