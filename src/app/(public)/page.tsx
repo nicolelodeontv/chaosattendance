@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { DiscordSignInButton } from "@/components/discord-sign-in-button";
+import { RetryMembershipButton } from "@/components/retry-membership-button";
 import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
@@ -8,6 +9,44 @@ import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
+
+const MEMBER_CACHE_TTL_MS = 60_000;
+const memberCache = new Map<string, number>();
+
+function hasFreshMemberCache(discordId: string): boolean {
+  const expiresAt = memberCache.get(discordId);
+
+  if (!expiresAt) return false;
+
+  if (expiresAt <= Date.now()) {
+    memberCache.delete(discordId);
+    return false;
+  }
+
+  return true;
+}
+
+async function getMembership(
+  discordId: string
+): Promise<"member" | "not_member" | "unavailable"> {
+  // This cache is per Vercel serverless instance. Instances do not share it,
+  // and it is reset on cold starts, so the 60-second cache only reduces
+  // repeated Discord lookups when requests land on the same warm instance.
+  if (hasFreshMemberCache(discordId)) {
+    return "member";
+  }
+
+  const membership = await checkDiscordGuildMembership(discordId);
+
+  // Cache ONLY positive membership results. Never cache not_member or
+  // unavailable so a newly joined member can gain access promptly and
+  // temporary Discord failures do not extend an outage.
+  if (membership === "member") {
+    memberCache.set(discordId, Date.now() + MEMBER_CACHE_TTL_MS);
+  }
+
+  return membership;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await auth();
@@ -30,7 +69,7 @@ export default async function Home({
   const user = session?.user as any;
   const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
   const membership = session?.user && discordId
-    ? await checkDiscordGuildMembership(discordId)
+    ? await getMembership(discordId)
     : null;
   const isChaosMember = membership === "member";
 
@@ -132,12 +171,16 @@ export default async function Home({
             <div className="flex items-center justify-center py-8">
               <div className="premium-card mx-auto w-full max-w-[460px] px-8 pb-8 pt-10 text-center">
                 <h1 className="font-display text-[22px] font-bold tracking-[0.2px] text-ink">
-                  Join the Chaos Discord server
+                  {membership === "unavailable"
+                    ? "We couldn't verify your Chaos membership."
+                    : "Join the Chaos Discord server"}
                 </h1>
                 <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-[1.5] text-ink2">
-                  Your Discord account is signed in, but it is not a member of the Chaos Discord server.
-                  Join the server to access attendance reporting.
+                  {membership === "unavailable"
+                    ? "Discord membership could not be verified right now. Please try again."
+                    : "Your Discord account is signed in, but it is not a member of the Chaos Discord server. Join the server to access attendance reporting."}
                 </p>
+                {membership === "unavailable" && <RetryMembershipButton />}
               </div>
             </div>
           )
