@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOwner } from "@/lib/admin";
+import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import { logServerError } from "@/lib/server-error";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -17,6 +18,7 @@ function isMissingArchiveTable(error: unknown): boolean {
 export async function GET() {
   const session = await auth();
   const user = session?.user as any;
+  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
 
   if (!session) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
@@ -24,6 +26,20 @@ export async function GET() {
 
   if (!isOwner(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const membership = await checkDiscordGuildMembership(discordId);
+  if (membership === "not_member") {
+    return NextResponse.json(
+      { error: "You must be a member of the Chaos Discord server." },
+      { status: 403 }
+    );
+  }
+  if (membership === "unavailable") {
+    return NextResponse.json(
+      { error: "We couldn't verify your Chaos membership. Please try again." },
+      { status: 503 }
+    );
   }
 
   const cutoff = new Date(Date.now() - THIRTY_DAYS_MS);
