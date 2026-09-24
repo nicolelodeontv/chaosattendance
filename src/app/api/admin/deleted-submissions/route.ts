@@ -17,7 +17,6 @@ function isMissingArchiveTable(error: unknown): boolean {
 export async function GET() {
   const session = await auth();
   const user = session?.user as any;
-
   if (!session) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }

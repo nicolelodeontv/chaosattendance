@@ -17,7 +17,9 @@ export async function GET(req: Request) {
   }
 
   const user = session.user as any;
-  if (!(await isAdmin(user?.discordId))) {
+  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+
+  if (!(await isAdmin(discordId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

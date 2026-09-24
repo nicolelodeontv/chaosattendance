@@ -235,6 +235,22 @@ export async function GET() {
   const session = await auth();
   const user = session?.user as any;
 
+  const membership = await checkDiscordGuildMembership(
+    typeof user?.discordId === "string" ? user.discordId.trim() : ""
+  );
+  if (membership === "not_member") {
+    return NextResponse.json(
+      { error: MEMBERSHIP_REQUIRED_ERROR },
+      { status: 403 }
+    );
+  }
+  if (membership === "unavailable") {
+    return NextResponse.json(
+      { error: MEMBERSHIP_UNAVAILABLE_ERROR },
+      { status: 503 }
+    );
+  }
+
   if (!(await isAdmin(user?.discordId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

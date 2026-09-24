@@ -1,12 +1,52 @@
 import { auth } from "@/auth";
 import { DiscordSignInButton } from "@/components/discord-sign-in-button";
+import { RetryMembershipButton } from "@/components/retry-membership-button";
 import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
 import { prisma } from "@/lib/prisma";
+import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
+
+const MEMBER_CACHE_TTL_MS = 60_000;
+const memberCache = new Map<string, number>();
+
+function hasFreshMemberCache(discordId: string): boolean {
+  const expiresAt = memberCache.get(discordId);
+
+  if (!expiresAt) return false;
+
+  if (expiresAt <= Date.now()) {
+    memberCache.delete(discordId);
+    return false;
+  }
+
+  return true;
+}
+
+async function getMembership(
+  discordId: string
+): Promise<"member" | "not_member" | "unavailable"> {
+  // This cache is per Vercel serverless instance. Instances do not share it,
+  // and it is reset on cold starts, so the 60-second cache only reduces
+  // repeated Discord lookups when requests land on the same warm instance.
+  if (hasFreshMemberCache(discordId)) {
+    return "member";
+  }
+
+  const membership = await checkDiscordGuildMembership(discordId);
+
+  // Cache ONLY positive membership results. Never cache not_member or
+  // unavailable so a newly joined member can gain access promptly and
+  // temporary Discord failures do not extend an outage.
+  if (membership === "member") {
+    memberCache.set(discordId, Date.now() + MEMBER_CACHE_TTL_MS);
+  }
+
+  return membership;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const session = await auth();
@@ -28,8 +68,20 @@ export default async function Home({
   const currentOpId = settings?.currentOpId?.trim() || "current";
   const user = session?.user as any;
   const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+  const membership = session?.user && discordId
+    ? await getMembership(discordId)
+    : null;
+  const isChaosMember = membership === "member";
+  console.info("[attendance-page] membership gate", {
+    branch:
+      membership === "member"
+        ? "member"
+        : membership === "not_member"
+          ? "not_member"
+          : "unavailable",
+  });
 
-  const ownSubmission = discordId
+  const ownSubmission = isChaosMember
     ? await prisma.submission.findUnique({
         where: {
           opId_discordId: {
@@ -63,6 +115,7 @@ export default async function Home({
         ].join(" ")}
       >
         {session?.user ? (
+          isChaosMember ? (
           <div>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
@@ -122,6 +175,23 @@ export default async function Home({
               />
             </div>
           </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="premium-card mx-auto w-full max-w-[460px] px-8 pb-8 pt-10 text-center">
+                <h1 className="font-display text-[22px] font-bold tracking-[0.2px] text-ink">
+                  {membership === "unavailable"
+                    ? "We couldn't verify your Chaos membership."
+                    : "You're not a member of this clan"}
+                </h1>
+                <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-[1.5] text-ink2">
+                  {membership === "unavailable"
+                    ? "We couldn't verify your Chaos membership. Please try again."
+                    : "Your Discord account isn't in the Chaos server, so you can't submit attendance. Join the server, then come back and reload."}
+                </p>
+                {membership === "unavailable" && <RetryMembershipButton />}
+              </div>
+            </div>
+          )
         ) : (
           <div className="flex items-center justify-center py-8">
             <div className="premium-card mx-auto w-full max-w-[380px] px-8 pb-8 pt-10 text-center">
