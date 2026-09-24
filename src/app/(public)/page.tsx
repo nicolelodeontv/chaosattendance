@@ -72,6 +72,14 @@ export default async function Home({
     ? await getMembership(discordId)
     : null;
   const isChaosMember = membership === "member";
+  console.info("[attendance-page] membership gate", {
+    branch:
+      membership === "member"
+        ? "member"
+        : membership === "not_member"
+          ? "not_member"
+          : "unavailable",
+  });
 
   const ownSubmission = isChaosMember
     ? await prisma.submission.findUnique({
@@ -173,12 +181,12 @@ export default async function Home({
                 <h1 className="font-display text-[22px] font-bold tracking-[0.2px] text-ink">
                   {membership === "unavailable"
                     ? "We couldn't verify your Chaos membership."
-                    : "Join the Chaos Discord server"}
+                    : "You're not a member of this clan"}
                 </h1>
                 <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-[1.5] text-ink2">
                   {membership === "unavailable"
-                    ? "Discord membership could not be verified right now. Please try again."
-                    : "Your Discord account is signed in, but it is not a member of the Chaos Discord server. Join the server to access attendance reporting."}
+                    ? "We couldn't verify your Chaos membership. Please try again."
+                    : "Your Discord account isn't in the Chaos server, so you can't submit attendance. Join the server, then come back and reload."}
                 </p>
                 {membership === "unavailable" && <RetryMembershipButton />}
               </div>
