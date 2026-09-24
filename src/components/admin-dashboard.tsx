@@ -1529,11 +1529,26 @@ function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
   );
 }
 
+function toDateTimeLocalValue(value: string | Date | null | undefined): string {
+  if (!value) return "";
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const local = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60_000
+  );
+
+  return local.toISOString().slice(0, 16);
+}
 function SettingsTab() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [guildName, setGuildName] = useState("");
   const [currentOpId, setCurrentOpId] = useState("");
+  const [savedOpId, setSavedOpId] = useState("");
+  const [submissionDeadline, setSubmissionDeadline] = useState("");
+  const [deadlineTouched, setDeadlineTouched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -1544,8 +1559,14 @@ function SettingsTab() {
       .then((d) => {
         setWebhookUrl(d.settings?.webhookUrl ?? "");
         setNotificationsEnabled(d.settings?.notificationsEnabled !== false);
+        const loadedOpId = d.settings?.currentOpId ?? "current";
         setGuildName(d.settings?.guildName ?? "Squadron");
-        setCurrentOpId(d.settings?.currentOpId ?? "current");
+        setCurrentOpId(loadedOpId);
+        setSavedOpId(loadedOpId);
+        setSubmissionDeadline(
+          toDateTimeLocalValue(d.settings?.submissionDeadline)
+        );
+        setDeadlineTouched(false);
         setLoading(false);
       });
   }, []);
@@ -1563,13 +1584,64 @@ function SettingsTab() {
 
   async function save() {
     setSaving(true);
-    const res = await fetch("/api/admin/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ webhookUrl, notifyDiscord: notificationsEnabled, guildName, currentOpId }),
-    });
-    setSaving(false);
-    if (res.ok) showToast("Settings saved");
+
+    const payload: Record<string, unknown> = {
+      webhookUrl,
+      notifyDiscord: notificationsEnabled,
+      guildName,
+      currentOpId,
+    };
+
+    const opChanged = currentOpId.trim() !== savedOpId.trim();
+    if (opChanged && !deadlineTouched) {
+      payload.submissionDeadline = null;
+    } else if (deadlineTouched) {
+      payload.submissionDeadline = submissionDeadline
+        ? new Date(submissionDeadline).toISOString()
+        : null;
+    }
+
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        showToast(data.error || "Unable to save settings");
+        return;
+      }
+
+      const saved = data.settings ?? {};
+      const nextOpId = saved.currentOpId ?? (currentOpId.trim() || "current");
+      setCurrentOpId(nextOpId);
+      setSavedOpId(nextOpId);
+      setSubmissionDeadline(toDateTimeLocalValue(saved.submissionDeadline));
+      setDeadlineTouched(false);
+      showToast("Settings saved");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function extendDeadline(hours: number) {
+    const existing = submissionDeadline ? new Date(submissionDeadline) : null;
+    const base =
+      existing && !Number.isNaN(existing.getTime()) && existing.getTime() > Date.now()
+        ? existing
+        : new Date();
+
+    setSubmissionDeadline(
+      toDateTimeLocalValue(new Date(base.getTime() + hours * 60 * 60 * 1000))
+    );
+    setDeadlineTouched(true);
+  }
+
+  function removeDeadline() {
+    setSubmissionDeadline("");
+    setDeadlineTouched(true);
   }
 
   if (loading) return <p className="text-sm text-ink2">Loading…</p>;
@@ -1595,6 +1667,39 @@ function SettingsTab() {
               maxLength={80}
             />
           </div>
+
+          <div className="mt-5 space-y-2">
+            <label htmlFor="settings-submission-deadline" className="text-sm font-medium text-ink">
+              Submission deadline
+            </label>
+            <input
+              id="settings-submission-deadline"
+              type="datetime-local"
+              value={submissionDeadline}
+              onChange={(e) => {
+                setSubmissionDeadline(e.target.value);
+                setDeadlineTouched(true);
+              }}
+            />
+            <p className="text-xs leading-5 text-ink2">
+              The deadline uses your browser&apos;s local time. Leave it blank to keep submissions open.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button type="button" className="premium-button-secondary px-3" onClick={() => extendDeadline(1)}>
+                Extend 1 hour
+              </button>
+              <button type="button" className="premium-button-secondary px-3" onClick={() => extendDeadline(24)}>
+                Extend 24 hours
+              </button>
+              <button type="button" className="premium-button-secondary px-3" onClick={removeDeadline}>
+                Remove deadline
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-ink2">
+            Changing the op ID also clears the submission deadline.
+          </p>
         </div>
 
         <div className="premium-card p-6">
@@ -1666,6 +1771,9 @@ function SettingsTab() {
         <p className="font-display text-sm text-ink">Lock behavior</p>
         <p className="mt-2 text-sm leading-6 text-ink2">
           A Discord account can create one submission per op. The server rejects duplicate POSTs with HTTP 409, and the form is hidden on page load once a matching submission exists.
+        </p>
+        <p className="mt-3 text-xs leading-5 text-ink2">
+          Only the owner can set, extend, or remove the submission deadline. Existing submissions remain visible after the deadline passes.
         </p>
         <p className="mt-3 text-xs leading-5 text-ink2">
           Admin deletion removes the stored submission, which allows that member to submit again for the same op when a correction is needed.

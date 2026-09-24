@@ -6,6 +6,12 @@ import { getRole, isAdmin } from "@/lib/admin";
 import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import { notifyDiscord } from "@/lib/discord";
 import { logServerError } from "@/lib/server-error";
+import {
+  getSubmissionDeadline,
+  isPastDeadline,
+  SUBMISSIONS_CLOSED_CODE,
+  SUBMISSIONS_CLOSED_ERROR,
+} from "@/lib/deadline";
 
 const MAX_NOTES_LENGTH = 500;
 const MAX_IGN_LENGTH = 64;
@@ -41,6 +47,14 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: MEMBERSHIP_UNAVAILABLE_ERROR },
       { status: 503 }
+    );
+  }
+
+  const submissionDeadline = await getSubmissionDeadline();
+  if (isPastDeadline(submissionDeadline)) {
+    return NextResponse.json(
+      { error: SUBMISSIONS_CLOSED_ERROR, code: SUBMISSIONS_CLOSED_CODE },
+      { status: 403 }
     );
   }
 

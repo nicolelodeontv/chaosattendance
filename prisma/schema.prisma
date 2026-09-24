@@ -61,5 +61,6 @@ model Settings {
   id          Int    @id @default(1)
   webhookUrl  String?
   guildName   String @default("Squadron")
-  currentOpId String @default("current")
+  currentOpId        String   @default("current")
+  submissionDeadline DateTime?
 }

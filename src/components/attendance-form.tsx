@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import {
+  SUBMISSIONS_CLOSED_CODE,
+  SUBMISSIONS_CLOSED_ERROR,
+} from "@/lib/deadline";
 
 type FieldName = "ign" | "attending" | "hasPilot" | "pilotName" | "hours";
 type FieldErrors = Partial<Record<FieldName, string>>;
