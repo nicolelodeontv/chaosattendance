@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/admin";
+import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 
 function parseKnownIds(value: string | null): Set<string> {
   if (!value) return new Set();
@@ -17,7 +18,22 @@ export async function GET(req: Request) {
   }
 
   const user = session.user as any;
-  if (!(await isAdmin(user?.discordId))) {
+  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+  const membership = await checkDiscordGuildMembership(discordId);
+  if (membership === "not_member") {
+    return NextResponse.json(
+      { error: "You must be a member of the Chaos Discord server." },
+      { status: 403 }
+    );
+  }
+  if (membership === "unavailable") {
+    return NextResponse.json(
+      { error: "We couldn't verify your Chaos membership. Please try again." },
+      { status: 503 }
+    );
+  }
+
+  if (!(await isAdmin(discordId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
