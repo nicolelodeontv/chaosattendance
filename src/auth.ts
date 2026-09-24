@@ -28,11 +28,39 @@ function logAuthError(error: unknown) {
   console.error("[auth][error]", error);
 }
 
+const configuredAuthUrl =
+  process.env.AUTH_URL?.trim() || process.env.NEXTAUTH_URL?.trim();
+
+function isValidAbsoluteUrl(value: string) {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const missingConfig = [
   !authSecret && "AUTH_SECRET",
   !discordClientId && "AUTH_DISCORD_ID",
   !discordClientSecret && "AUTH_DISCORD_SECRET",
 ].filter(Boolean);
+
+if (configuredAuthUrl && !isValidAbsoluteUrl(configuredAuthUrl)) {
+  console.error(
+    "[auth][config] AUTH_URL/NEXTAUTH_URL is set but is not a valid absolute URL."
+  );
+}
+
+if (
+  process.env.AUTH_URL?.trim() &&
+  process.env.NEXTAUTH_URL?.trim() &&
+  process.env.AUTH_URL.trim() !== process.env.NEXTAUTH_URL.trim()
+) {
+  console.error(
+    "[auth][config] Both AUTH_URL and NEXTAUTH_URL are set; AUTH_URL takes precedence in Auth.js v5."
+  );
+}
 
 if (missingConfig.length > 0) {
   console.error(
@@ -41,7 +69,7 @@ if (missingConfig.length > 0) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  debug: true,
+  debug: process.env.AUTH_DEBUG === "true",
   logger: {
     error: logAuthError,
   },
