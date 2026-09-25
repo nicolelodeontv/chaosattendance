@@ -20,14 +20,24 @@ export function DeadlineNotice({ deadline }: { deadline: string }) {
       }).format(date)
     );
 
-    const remaining = date.getTime() - Date.now();
-    if (remaining <= 0 || remaining > MAX_TIMEOUT_MS) return;
+    let timer: number | undefined;
 
-    const timer = window.setTimeout(() => {
-      router.refresh();
-    }, remaining);
+    const scheduleRefresh = () => {
+      const remaining = date.getTime() - Date.now();
 
-    return () => window.clearTimeout(timer);
+      if (remaining <= 0) {
+        router.refresh();
+        return;
+      }
+
+      timer = window.setTimeout(scheduleRefresh, Math.min(remaining, MAX_TIMEOUT_MS));
+    };
+
+    scheduleRefresh();
+
+    return () => {
+      if (typeof timer !== "undefined") window.clearTimeout(timer);
+    };
   }, [deadline, router]);
 
   return (
