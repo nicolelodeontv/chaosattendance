@@ -303,6 +303,15 @@ export function AttendanceForm({
         return;
       }
 
+      if (res.status === 403 && data.code === SUBMISSIONS_CLOSED_CODE) {
+        setConfirmOpen(false);
+        setStatus("idle");
+        setFailureKind(null);
+        setError(SUBMISSIONS_CLOSED_ERROR);
+        router.refresh();
+        return;
+      }
+
       if (res.status >= 500) {
         setStatus("error");
         setFailureKind("server");
