@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { logServerError } from "@/lib/server-error";
-
-export const SUBMISSIONS_CLOSED_ERROR = "Submissions are closed for this op.";
-export const SUBMISSIONS_CLOSED_CODE = "SUBMISSIONS_CLOSED";
+import {
+  SUBMISSIONS_CLOSED_CODE,
+  SUBMISSIONS_CLOSED_ERROR,
+} from "@/lib/deadline-constants";
 
 export function isPastDeadline(
   deadline: Date | string | null | undefined,
