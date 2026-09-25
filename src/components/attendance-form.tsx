@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-
+import {
+  SUBMISSIONS_CLOSED_CODE,
+  SUBMISSIONS_CLOSED_ERROR,
+} from "@/lib/deadline-constants";
 type FieldName = "ign" | "attending" | "hasPilot" | "pilotName" | "hours";
 type FieldErrors = Partial<Record<FieldName, string>>;
 type TouchedFields = Record<FieldName, boolean>;
@@ -296,6 +299,15 @@ export function AttendanceForm({
         setStatus("error");
         setFailureKind("lock");
         setError(DUPLICATE_SUBMISSION_ERROR);
+        router.refresh();
+        return;
+      }
+
+      if (res.status === 403 && data.code === SUBMISSIONS_CLOSED_CODE) {
+        setConfirmOpen(false);
+        setStatus("idle");
+        setFailureKind(null);
+        setError(SUBMISSIONS_CLOSED_ERROR);
         router.refresh();
         return;
       }

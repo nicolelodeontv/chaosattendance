@@ -1,0 +1,52 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
+export function DeadlineNotice({ deadline }: { deadline: string }) {
+  const router = useRouter();
+  const [formatted, setFormatted] = useState("");
+
+  useEffect(() => {
+    const date = new Date(deadline);
+    if (Number.isNaN(date.getTime())) return;
+
+    setFormatted(
+      new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(date)
+    );
+
+    let timer: number | undefined;
+
+    const scheduleRefresh = () => {
+      const remaining = date.getTime() - Date.now();
+
+      if (remaining <= 0) {
+        router.refresh();
+        return;
+      }
+
+      timer = window.setTimeout(scheduleRefresh, Math.min(remaining, MAX_TIMEOUT_MS));
+    };
+
+    scheduleRefresh();
+
+    return () => {
+      if (typeof timer !== "undefined") window.clearTimeout(timer);
+    };
+  }, [deadline, router]);
+
+  return (
+    <div
+      className="mb-4 rounded-xl border border-line bg-panel2/60 px-4 py-3 text-sm text-ink2"
+      role="status"
+      aria-live="polite"
+    >
+      Submissions close {formatted || "at the deadline"}.
+    </div>
+  );
+}

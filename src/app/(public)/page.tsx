@@ -4,8 +4,10 @@ import { RetryMembershipButton } from "@/components/retry-membership-button";
 import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
 import { AttendanceForm } from "@/components/attendance-form";
+import { DeadlineNotice } from "@/components/deadline-notice";
 import { prisma } from "@/lib/prisma";
 import { checkDiscordGuildMembership } from "@/lib/discord-membership";
+import { isPastDeadline } from "@/lib/deadline";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +68,8 @@ export default async function Home({
     .catch(() => null);
   const guildName = settings?.guildName ?? "Squadron";
   const currentOpId = settings?.currentOpId?.trim() || "current";
+  const submissionDeadline = settings?.submissionDeadline ?? null;
+  const deadlinePassed = isPastDeadline(submissionDeadline);
   const user = session?.user as any;
   const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
   const membership = session?.user && discordId
@@ -155,24 +159,39 @@ export default async function Home({
             </div>
 
             <div className="mx-auto w-full">
-              <AttendanceForm
-                initialSubmission={
-                  ownSubmission
-                    ? {
-                        id: ownSubmission.id,
-                        opId: ownSubmission.opId,
-                        ign: ownSubmission.ign,
-                        attending: ownSubmission.attending,
-                        hasPilot: ownSubmission.hasPilot,
-                        pilotName: ownSubmission.pilotName,
-                        hours: ownSubmission.hours,
-                        notes: ownSubmission.notes,
-                        createdAt: ownSubmission.createdAt.toISOString(),
-                        discordAvatar: ownSubmission.discordAvatar,
-                      }
-                    : null
-                }
-              />
+              {!ownSubmission && submissionDeadline && !deadlinePassed ? (
+                <DeadlineNotice deadline={submissionDeadline.toISOString()} />
+              ) : null}
+
+              {deadlinePassed && !ownSubmission ? (
+                <div className="premium-card px-6 py-8 text-center">
+                  <h2 className="font-display text-xl font-bold tracking-tight text-ink">
+                    Submissions are closed
+                  </h2>
+                  <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-6 text-ink2">
+                    The deadline for {currentOpId} has passed. Ask an admin to reopen it if you still need to report.
+                  </p>
+                </div>
+              ) : (
+                <AttendanceForm
+                  initialSubmission={
+                    ownSubmission
+                      ? {
+                          id: ownSubmission.id,
+                          opId: ownSubmission.opId,
+                          ign: ownSubmission.ign,
+                          attending: ownSubmission.attending,
+                          hasPilot: ownSubmission.hasPilot,
+                          pilotName: ownSubmission.pilotName,
+                          hours: ownSubmission.hours,
+                          notes: ownSubmission.notes,
+                          createdAt: ownSubmission.createdAt.toISOString(),
+                          discordAvatar: ownSubmission.discordAvatar,
+                        }
+                      : null
+                  }
+                />
+              )}
             </div>
           </div>
           ) : (

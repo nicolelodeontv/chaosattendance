@@ -120,7 +120,7 @@ Run that file once in the SQL editor for the same PostgreSQL database used by th
 production `DATABASE_URL`. The SQL uses `IF NOT EXISTS` for the table and indexes,
 so rerunning it is safe.
 
-Do **not** use `npm run db:push`, `prisma migrate`, or a Vercel build to create
+**Do not** use `npm run db:push`, `prisma migrate`, or a Vercel build to create
 the production archive table. The production database schema is managed separately
 from application deployment.
 
