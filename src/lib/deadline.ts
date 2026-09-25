@@ -1,9 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { logServerError } from "@/lib/server-error";
-import {
-  SUBMISSIONS_CLOSED_CODE,
-  SUBMISSIONS_CLOSED_ERROR,
-} from "@/lib/deadline-constants";
 
 export function isPastDeadline(
   deadline: Date | string | null | undefined,
@@ -20,15 +15,10 @@ export function isPastDeadline(
 }
 
 export async function getSubmissionDeadline(): Promise<Date | null> {
-  try {
-    const settings = await prisma.settings.findUnique({
-      where: { id: 1 },
-      select: { submissionDeadline: true },
-    });
+  const settings = await prisma.settings.findUnique({
+    where: { id: 1 },
+    select: { submissionDeadline: true },
+  });
 
-    return settings?.submissionDeadline ?? null;
-  } catch (error) {
-    logServerError("Unable to read submission deadline:", error);
-    return null;
-  }
+  return settings?.submissionDeadline ?? null;
 }
