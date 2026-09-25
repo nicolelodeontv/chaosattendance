@@ -49,7 +49,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const submissionDeadline = await getSubmissionDeadline();
+  let submissionDeadline: Date | null;
+  try {
+    submissionDeadline = await getSubmissionDeadline();
+  } catch (error) {
+    logServerError("Unable to read submission deadline:", error);
+    return NextResponse.json(
+      { error: "Unable to verify submission deadline. Please try again." },
+      { status: 503 }
+    );
+  }
+
   if (isPastDeadline(submissionDeadline)) {
     return NextResponse.json(
       { error: SUBMISSIONS_CLOSED_ERROR, code: SUBMISSIONS_CLOSED_CODE },
