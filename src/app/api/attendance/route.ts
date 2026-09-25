@@ -6,12 +6,11 @@ import { getRole, isAdmin } from "@/lib/admin";
 import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import { notifyDiscord } from "@/lib/discord";
 import { logServerError } from "@/lib/server-error";
+import { getSubmissionDeadline, isPastDeadline } from "@/lib/deadline";
 import {
-  getSubmissionDeadline,
-  isPastDeadline,
   SUBMISSIONS_CLOSED_CODE,
   SUBMISSIONS_CLOSED_ERROR,
-} from "@/lib/deadline";
+} from "@/lib/deadline-constants";
 
 const MAX_NOTES_LENGTH = 500;
 const MAX_IGN_LENGTH = 64;
