@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { getChannelViewerIds, type DiscordChannelMember } from "@/lib/discord-channel-access";
 
 type DiscordMember = {
   user?: {
@@ -35,6 +36,7 @@ export async function GET() {
   const guildId = process.env.DISCORD_GUILD_ID?.trim() ?? "";
   const botToken = process.env.DISCORD_BOT_TOKEN?.trim() ?? "";
   const memberRoleId = process.env.DISCORD_MEMBER_ROLE_ID?.trim() ?? "";
+  const channelId = process.env.DISCORD_ROSTER_CHANNEL_ID?.trim() ?? "";
 
   if (!/^\d+$/.test(guildId) || !botToken) {
     return NextResponse.json(
@@ -52,6 +54,12 @@ export async function GET() {
       { status: 503 }
     );
   }
+  if (channelId && !/^\d+$/.test(channelId)) {
+    return NextResponse.json(
+      { error: "DISCORD_ROSTER_CHANNEL_ID must be a Discord channel ID." },
+      { status: 503 }
+    );
+  }
 
   const settings = await prisma.settings.findUnique({
     where: { id: 1 },
@@ -59,7 +67,8 @@ export async function GET() {
   });
   const currentOpId = settings?.currentOpId?.trim() || "current";
 
-  const members: Array<{ discordId: string; username: string }> = [];
+  let members: Array<{ discordId: string; username: string }> = [];
+  const channelMembers: DiscordChannelMember[] = [];
   let after = "0";
   let complete = false;
 
@@ -115,7 +124,7 @@ export async function GET() {
         );
       }
       if (
-        memberRoleId &&
+        (memberRoleId || channelId) &&
         (!Array.isArray(member.roles) ||
           !member.roles.every((role) => typeof role === "string"))
       ) {
@@ -129,6 +138,9 @@ export async function GET() {
         (memberRoleId && !(member.roles as string[]).includes(memberRoleId))
       ) {
         continue;
+      }
+      if (channelId) {
+        channelMembers.push({ user: { id }, roles: member.roles as string[] });
       }
       const username =
         (typeof member.user?.global_name === "string" && member.user.global_name.trim()) ||
@@ -163,6 +175,29 @@ export async function GET() {
     );
   }
 
+  let scope = memberRoleId ? "configured-role" : "all-server-members";
+  if (channelId) {
+    try {
+      const viewerIds = await getChannelViewerIds(guildId, channelId, channelMembers);
+      members = members.filter((member) => viewerIds.has(member.discordId));
+      scope = memberRoleId ? "configured-role-and-channel" : "configured-channel-viewers";
+    } catch (error) {
+      // Log only the endpoint path/status, never credentials or response payloads.
+      console.error(
+        "[missing-members] Channel visibility filter failed:",
+        error instanceof Error ? error.message : "Unknown Discord channel permission error.",
+      );
+      return NextResponse.json(
+        {
+          error:
+            "Could not verify channel visibility for the roster. Check that the channel belongs to the configured server and that the bot can view it.",
+          code: "DISCORD_CHANNEL_FILTER_FAILED",
+        },
+        { status: 502 }
+      );
+    }
+  }
+
   const submitted = await prisma.submission.findMany({
     where: { opId: currentOpId },
     select: { discordId: true },
@@ -179,6 +214,6 @@ export async function GET() {
     missingCount: missing.length,
     missing,
     syncedAt: new Date().toISOString(),
-    scope: memberRoleId ? "configured-role" : "all-server-members",
+    scope,
   });
 }
