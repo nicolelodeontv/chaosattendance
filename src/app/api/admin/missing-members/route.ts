@@ -108,18 +108,32 @@ export async function GET() {
     const pageMembers = payload as DiscordMember[];
     for (const member of pageMembers) {
       const id = member.user?.id;
+      if (typeof id !== "string" || !/^\\d+$/.test(id)) {
+        return NextResponse.json(
+          { error: "Discord returned a member without a valid account ID." },
+          { status: 502 }
+        );
+      }
+      if (
+        memberRoleId &&
+        (!Array.isArray(member.roles) ||
+          !member.roles.every((role) => typeof role === "string"))
+      ) {
+        return NextResponse.json(
+          { error: "Discord returned an invalid member-role list." },
+          { status: 502 }
+        );
+      }
+      if (
+        member.user?.bot === true ||
+        (memberRoleId && !(member.roles as string[]).includes(memberRoleId))
+      ) {
+        continue;
+      }
       const username =
         (typeof member.user?.global_name === "string" && member.user.global_name.trim()) ||
         (typeof member.user?.username === "string" && member.user.username.trim()) ||
         "Unknown member";
-      if (
-        typeof id !== "string" ||
-        member.user?.bot === true ||
-        (memberRoleId &&
-          (!Array.isArray(member.roles) || !member.roles.includes(memberRoleId)))
-      ) {
-        continue;
-      }
       members.push({ discordId: id, username });
     }
 
