@@ -22,13 +22,14 @@ const MAX_PAGES = 20;
 
 export async function GET() {
   const session = await auth();
-  if (!session) {
+  const user = session?.user as { discordId?: unknown } | undefined;
+  const discordId =
+    typeof user?.discordId === "string" ? user.discordId.trim() : "";
+
+  if (!/^\d+$/.test(discordId)) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const user = session.user as { discordId?: unknown };
-  const discordId =
-    typeof user?.discordId === "string" ? user.discordId.trim() : "";
   if (!(await isAdmin(discordId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
