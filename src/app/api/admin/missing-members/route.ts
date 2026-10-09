@@ -108,7 +108,7 @@ export async function GET() {
     const pageMembers = payload as DiscordMember[];
     for (const member of pageMembers) {
       const id = member.user?.id;
-      if (typeof id !== "string" || !/^\\d+$/.test(id)) {
+      if (typeof id !== "string" || !/^\d+$/.test(id)) {
         return NextResponse.json(
           { error: "Discord returned a member without a valid account ID." },
           { status: 502 }
