@@ -220,10 +220,13 @@ function MissingMembersTab() {
   const [data, setData] = useState<MissingMembersResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copiedId, setCopiedId] = useState("");
 
   async function refresh() {
     setLoading(true);
     setError("");
+    setData(null);
+    setCopiedId("");
     try {
       const response = await fetch("/api/admin/missing-members", { cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
@@ -294,13 +297,21 @@ function MissingMembersTab() {
                 <span className="min-w-0 truncate text-sm text-ink">{member.username}</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(member.discordId);
+                  onClick={async () => {
+                    try {
+                      if (!navigator.clipboard?.writeText) {
+                        throw new Error("Clipboard access is unavailable in this browser.");
+                      }
+                      await navigator.clipboard.writeText(member.discordId);
+                      setCopiedId(member.discordId);
+                    } catch {
+                      setError("Could not copy the Discord ID. Check clipboard permissions and try again.");
+                    }
                   }}
                   className="shrink-0 rounded-md border border-line px-2 py-1.5 text-xs text-ink2 transition-colors hover:border-cyan/40 hover:text-cyan"
                   title="Copy Discord account ID"
                 >
-                  Copy ID
+                  {copiedId === member.discordId ? "Copied" : "Copy ID"}
                 </button>
               </div>
             ))}
