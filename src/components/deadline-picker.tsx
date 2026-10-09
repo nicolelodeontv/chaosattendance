@@ -78,7 +78,10 @@ export function DeadlinePicker({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [panelPlacement, setPanelPlacement] = useState<"above" | "below">("below");
+  const [panelMaxHeight, setPanelMaxHeight] = useState<number | null>(null);
   const [draft, setDraft] = useState<DeadlineDraft>(() => toDraft(value));
   const [view, setView] = useState(() => {
     const initial = toDraft(value);
@@ -117,6 +120,51 @@ export function DeadlinePicker({
     );
     selected?.forEach((button) => button.scrollIntoView({ block: "nearest" }));
   }, [open, draft.hour12, draft.minute, draft.pm]);
+
+  useEffect(() => {
+    if (!open) {
+      setPanelPlacement("below");
+      setPanelMaxHeight(null);
+      return;
+    }
+
+    function repositionPanel() {
+      const trigger = triggerRef.current;
+      const panel = panelRef.current;
+      if (!trigger || !panel) return;
+
+      const triggerBounds = trigger.getBoundingClientRect();
+      const gap = 8;
+      const edge = 8;
+      const belowSpace = Math.max(
+        0,
+        window.innerHeight - triggerBounds.bottom - gap - edge
+      );
+      const aboveSpace = Math.max(0, triggerBounds.top - gap - edge);
+      const naturalHeight = panel.scrollHeight;
+      const placeAbove = naturalHeight > belowSpace && aboveSpace > belowSpace;
+      const availableSpace = placeAbove ? aboveSpace : belowSpace;
+      const maxHeight = Math.max(
+        80,
+        Math.min(
+          520,
+          Math.floor(window.innerHeight * 0.8),
+          Math.floor(availableSpace)
+        )
+      );
+
+      setPanelPlacement(placeAbove ? "above" : "below");
+      setPanelMaxHeight(maxHeight);
+    }
+
+    repositionPanel();
+    window.addEventListener("resize", repositionPanel);
+    window.addEventListener("scroll", repositionPanel, true);
+    return () => {
+      window.removeEventListener("resize", repositionPanel);
+      window.removeEventListener("scroll", repositionPanel, true);
+    };
+  }, [open]);
 
   function openPicker() {
     const next = toDraft(value);
@@ -178,7 +226,12 @@ export function DeadlinePicker({
       {open && (
         <div
           id={id + "-panel"}
-          className="deadline-picker__panel"
+          ref={panelRef}
+          className={
+            "deadline-picker__panel" +
+            (panelPlacement === "above" ? " is-above" : "")
+          }
+          style={panelMaxHeight !== null ? { maxHeight: panelMaxHeight + "px" } : undefined}
           role="dialog"
           aria-label="Choose submission deadline"
         >
