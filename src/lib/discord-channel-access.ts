@@ -1,6 +1,6 @@
 const API = "https://discord.com/api/v10";
-const VIEW_CHANNEL = 1n << 10n;
-const ADMINISTRATOR = 1n << 3n;
+const VIEW_CHANNEL = BigInt(1) << BigInt(10);
+const ADMINISTRATOR = BigInt(1) << BigInt(3);
 
 export type DiscordChannelMember = {
   user: { id: string };
@@ -83,9 +83,9 @@ export async function getChannelViewerIds(
     }
 
     // Base permissions: @everyone plus all member roles.
-    let permissions = rolePerms.get(guildId) ?? 0n;
+    let permissions = rolePerms.get(guildId) ?? BigInt(0);
     for (const roleId of member.roles) {
-      permissions |= rolePerms.get(roleId) ?? 0n;
+      permissions |= rolePerms.get(roleId) ?? BigInt(0);
     }
     if (permissions & ADMINISTRATOR) {
       viewers.add(userId);
@@ -99,8 +99,8 @@ export async function getChannelViewerIds(
     }
 
     // Aggregate role denies, then role allows, regardless of overwrite order.
-    let roleDeny = 0n;
-    let roleAllow = 0n;
+    let roleDeny = BigInt(0);
+    let roleAllow = BigInt(0);
     for (const overwrite of overwrites) {
       if (overwrite.type === 0 && member.roles.includes(overwrite.id)) {
         roleDeny |= BigInt(overwrite.deny);
