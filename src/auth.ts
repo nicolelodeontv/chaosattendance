@@ -17,8 +17,19 @@ const discordClientSecret =
 function logAuthError(error: unknown) {
   if (error instanceof Error) {
     console.error(`[auth][error] ${error.name}: ${error.message}`);
-    if (error.cause instanceof Error) {
-      console.error(`[auth][cause] ${error.cause.name}: ${error.cause.message}`);
+    const cause = error.cause;
+    if (cause instanceof Error) {
+      console.error(`[auth][cause] ${cause.name}: ${cause.message}`);
+      if (cause.stack) console.error(cause.stack);
+    } else if (cause && typeof cause === "object") {
+      // Auth.js callback errors often wrap the original provider error in cause.err.
+      const nested = "err" in cause ? cause.err : undefined;
+      if (nested instanceof Error) {
+        console.error(`[auth][cause] ${nested.name}: ${nested.message}`);
+        if (nested.stack) console.error(nested.stack);
+      } else {
+        console.error("[auth][cause] Original provider error was not an Error instance.");
+      }
     }
     if (error.stack) console.error(error.stack);
     return;
@@ -77,6 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Discord({
       clientId: discordClientId,
       clientSecret: discordClientSecret,
+      issuer: "https://discord.com",
       authorization: {
         url: "https://discord.com/api/oauth2/authorize",
         params: {
