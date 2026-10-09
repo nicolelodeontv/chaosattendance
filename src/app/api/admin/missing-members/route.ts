@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
-import { getChannelViewerIds, type DiscordChannelMember } from "@/lib/discord-channel-access";
+import { DiscordChannelAccessError, getChannelViewerIds, type DiscordChannelMember } from "@/lib/discord-channel-access";
 
 type DiscordMember = {
   user?: {
@@ -182,15 +182,40 @@ export async function GET() {
       members = members.filter((member) => viewerIds.has(member.discordId));
       scope = memberRoleId ? "configured-role-and-channel" : "configured-channel-viewers";
     } catch (error) {
-      // Log only the endpoint path/status, never credentials or response payloads.
-      console.error(
-        "[missing-members] Channel visibility filter failed:",
-        error instanceof Error ? error.message : "Unknown Discord channel permission error.",
-      );
+      if (error instanceof DiscordChannelAccessError) {
+        // Safe diagnostics only; never log headers, tokens, or response bodies.
+        console.error("[missing-members] Channel permission lookup failed", {
+          endpoint: error.endpoint,
+          status: error.status,
+          discordCode: error.discordCode,
+          reason: error.reason,
+        });
+
+        const errorMessage =
+          error.reason === "guild_mismatch"
+            ? "The configured roster channel belongs to a different Discord server than DISCORD_GUILD_ID."
+            : error.discordCode === 50001
+              ? `The bot cannot access the configured roster channel (HTTP ${error.status}, Discord code 50001: Missing Access). Grant the bot View Channel permission.`
+              : error.discordCode === 10003
+                ? `Discord could not find the configured roster channel (HTTP ${error.status}, code 10003: Unknown Channel). Verify the channel ID and server.`
+                : error.discordCode === 50013
+                  ? `The bot lacks permissions for a Discord channel lookup (HTTP ${error.status}, code 50013: Missing Permissions).`
+                  : error.reason === "invalid_payload"
+                    ? "Discord returned unexpected channel or permission data. Confirm the configured ID is a regular channel in the configured server, not a thread or category."
+                    : `Could not verify channel visibility (Discord endpoint ${error.endpoint}, HTTP ${error.status || "network error"}${error.discordCode === null ? "" : `, code ${error.discordCode}`}). Check the bot's channel access and try again.`;
+
+        return NextResponse.json(
+          { error: errorMessage, code: "DISCORD_CHANNEL_FILTER_FAILED" },
+          { status: 502 }
+        );
+      }
+
+      console.error("[missing-members] Channel permission lookup failed", {
+        reason: "unexpected_error",
+      });
       return NextResponse.json(
         {
-          error:
-            "Could not verify channel visibility for the roster. Check that the channel belongs to the configured server and that the bot can view it.",
+          error: "Could not verify channel visibility for the roster. Check the channel configuration and bot permissions.",
           code: "DISCORD_CHANNEL_FILTER_FAILED",
         },
         { status: 502 }
