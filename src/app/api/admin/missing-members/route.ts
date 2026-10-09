@@ -13,6 +13,8 @@ type DiscordMember = {
   roles?: unknown;
 };
 
+export const dynamic = "force-dynamic";
+
 const DISCORD_API = "https://discord.com/api/v10";
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 20;
