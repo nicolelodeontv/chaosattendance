@@ -110,6 +110,14 @@ export function DeadlinePicker({
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const selected = rootRef.current?.querySelectorAll<HTMLButtonElement>(
+      ".deadline-picker__time-column button.is-selected"
+    );
+    selected?.forEach((button) => button.scrollIntoView({ block: "nearest" }));
+  }, [open, draft.hour12, draft.minute, draft.pm]);
+
   function openPicker() {
     const next = toDraft(value);
     setDraft(next);
