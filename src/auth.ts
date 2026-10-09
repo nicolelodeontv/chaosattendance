@@ -88,6 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Discord({
       clientId: discordClientId,
       clientSecret: discordClientSecret,
+      issuer: "https://discord.com",
       authorization: {
         url: "https://discord.com/api/oauth2/authorize",
         params: {
