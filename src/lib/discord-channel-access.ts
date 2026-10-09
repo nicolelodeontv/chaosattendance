@@ -10,20 +10,66 @@ export type DiscordChannelMember = {
 type Overwrite = { id: string; type: 0 | 1; allow: string; deny: string };
 type Role = { id: string; permissions: string };
 
+export type DiscordChannelFailureReason =
+  | "http_error"
+  | "network_error"
+  | "invalid_json"
+  | "invalid_payload"
+  | "guild_mismatch";
+
+export class DiscordChannelAccessError extends Error {
+  constructor(
+    readonly endpoint: string,
+    readonly status: number,
+    readonly discordCode: number | string | null,
+    readonly reason: DiscordChannelFailureReason,
+  ) {
+    super("Discord channel permission lookup failed.");
+    this.name = "DiscordChannelAccessError";
+  }
+}
+
 function isNumericString(value: unknown): value is string {
   return typeof value === "string" && /^[0-9]+$/.test(value);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 async function discord<T>(path: string): Promise<T> {
   const token = process.env.DISCORD_BOT_TOKEN?.trim();
-  if (!token) throw new Error("Discord bot token is not configured.");
+  if (!token) {
+    throw new DiscordChannelAccessError(path, 0, null, "network_error");
+  }
 
-  const res = await fetch(`${API}${path}`, {
-    headers: { Authorization: `Bot ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Discord ${path} failed: ${res.status}`);
-  return (await res.json()) as T;
+  let response: Response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      headers: { Authorization: `Bot ${token}` },
+      cache: "no-store",
+    });
+  } catch {
+    throw new DiscordChannelAccessError(path, 0, null, "network_error");
+  }
+
+  if (!response.ok) {
+    let discordCode: number | string | null = null;
+    const body: unknown = await response.json().catch(() => null);
+    if (isRecord(body)) {
+      const value = body.code;
+      if (typeof value === "number" || (typeof value === "string" && /^[0-9]+$/.test(value))) {
+        discordCode = value;
+      }
+    }
+    throw new DiscordChannelAccessError(path, response.status, discordCode, "http_error");
+  }
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new DiscordChannelAccessError(path, response.status, null, "invalid_json");
+  }
 }
 
 export async function getChannelViewerIds(
@@ -31,45 +77,60 @@ export async function getChannelViewerIds(
   channelId: string,
   members: DiscordChannelMember[],
 ): Promise<Set<string>> {
-  const [guild, roles, channel] = await Promise.all([
-    discord<{ owner_id: string }>(`/guilds/${guildId}`),
-    discord<Role[]>(`/guilds/${guildId}/roles`),
-    discord<{ guild_id: string; permission_overwrites: Overwrite[] }>(
-      `/channels/${channelId}`,
-    ),
+  const channelPath = `/channels/${channelId}`;
+  const [guildRaw, rolesRaw, channelRaw] = await Promise.all([
+    discord<unknown>(`/guilds/${guildId}`),
+    discord<unknown>(`/guilds/${guildId}/roles`),
+    discord<unknown>(channelPath),
   ]);
 
-  if (!isNumericString(guild.owner_id)) {
-    throw new Error("Discord returned an invalid guild owner ID.");
+  if (!isRecord(guildRaw) || !isNumericString(guildRaw.owner_id)) {
+    throw new DiscordChannelAccessError(`/guilds/${guildId}`, 200, null, "invalid_payload");
   }
+  const ownerId = guildRaw.owner_id;
+
   if (
-    !Array.isArray(roles) ||
-    !roles.every(
+    !Array.isArray(rolesRaw) ||
+    !rolesRaw.every(
       (role) =>
-        role &&
+        isRecord(role) &&
         isNumericString(role.id) &&
         isNumericString(role.permissions),
     )
   ) {
-    throw new Error("Discord returned invalid role permissions.");
+    throw new DiscordChannelAccessError(`/guilds/${guildId}/roles`, 200, null, "invalid_payload");
   }
+  const roles = rolesRaw as Role[];
+
+  if (!isRecord(channelRaw)) {
+    throw new DiscordChannelAccessError(channelPath, 200, null, "invalid_payload");
+  }
+
+  // Check guild identity before channel shape to clearly diagnose a wrong-server ID.
+  if (channelRaw.guild_id !== guildId) {
+    throw new DiscordChannelAccessError(channelPath, 200, null, "guild_mismatch");
+  }
+
+  const overwriteData = channelRaw.permission_overwrites;
   if (
-    channel.guild_id !== guildId ||
-    !Array.isArray(channel.permission_overwrites) ||
-    !channel.permission_overwrites.every(
+    !Array.isArray(overwriteData) ||
+    !overwriteData.every(
       (overwrite) =>
-        overwrite &&
+        isRecord(overwrite) &&
         isNumericString(overwrite.id) &&
         (overwrite.type === 0 || overwrite.type === 1) &&
         isNumericString(overwrite.allow) &&
         isNumericString(overwrite.deny),
     )
   ) {
-    throw new Error("Discord returned invalid channel permissions or the channel belongs to a different guild.");
+    // Threads and non-standard channel types can omit normal channel overwrites.
+    throw new DiscordChannelAccessError(channelPath, 200, null, "invalid_payload");
   }
+  const overwrites = overwriteData as Overwrite[];
 
-  const rolePerms = new Map(roles.map((role) => [role.id, BigInt(role.permissions)]));
-  const overwrites = channel.permission_overwrites;
+  const rolePerms = new Map(
+    roles.map((role) => [role.id, BigInt(role.permissions)]),
+  );
   const everyoneOverwrite = overwrites.find(
     (overwrite) => overwrite.type === 0 && overwrite.id === guildId,
   );
@@ -77,12 +138,11 @@ export async function getChannelViewerIds(
 
   for (const member of members) {
     const userId = member.user.id;
-    if (userId === guild.owner_id) {
+    if (userId === ownerId) {
       viewers.add(userId);
       continue;
     }
 
-    // Base permissions: @everyone plus all member roles.
     let permissions = rolePerms.get(guildId) ?? BigInt(0);
     for (const roleId of member.roles) {
       permissions |= rolePerms.get(roleId) ?? BigInt(0);
@@ -92,13 +152,11 @@ export async function getChannelViewerIds(
       continue;
     }
 
-    // Apply the @everyone overwrite first.
     if (everyoneOverwrite) {
       permissions &= ~BigInt(everyoneOverwrite.deny);
       permissions |= BigInt(everyoneOverwrite.allow);
     }
 
-    // Aggregate role denies, then role allows, regardless of overwrite order.
     let roleDeny = BigInt(0);
     let roleAllow = BigInt(0);
     for (const overwrite of overwrites) {
@@ -110,7 +168,6 @@ export async function getChannelViewerIds(
     permissions &= ~roleDeny;
     permissions |= roleAllow;
 
-    // Member-specific overwrites are applied last.
     const memberOverwrite = overwrites.find(
       (overwrite) => overwrite.type === 1 && overwrite.id === userId,
     );
