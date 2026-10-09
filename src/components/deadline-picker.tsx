@@ -135,7 +135,7 @@ export function DeadlinePicker({
 
       const triggerBounds = trigger.getBoundingClientRect();
       const gap = 8;
-      const edge = 8;
+      const edge = 24;
       const belowSpace = Math.max(
         0,
         window.innerHeight - triggerBounds.bottom - gap - edge
