@@ -213,7 +213,7 @@ type MissingMembersResponse = {
   missingCount: number;
   missing: MissingMember[];
   syncedAt: string;
-  scope: "configured-role" | "all-server-members";
+  scope: "configured-role" | "configured-channel-viewers" | "configured-role-and-channel" | "all-server-members";
 };
 
 function MissingMembersTab() {
@@ -268,7 +268,7 @@ function MissingMembersTab() {
         <div className="m-4 rounded-lg border border-red/30 bg-red/5 p-4 text-sm text-red" role="alert">
           <p>{error}</p>
           <p className="mt-2 text-xs leading-5">
-            This view needs a valid DISCORD_BOT_TOKEN and Discord’s Server Members intent. If DISCORD_MEMBER_ROLE_ID is set, only members with that role are counted.
+            This view needs a valid DISCORD_BOT_TOKEN and Discord’s Server Members intent. If DISCORD_ROSTER_CHANNEL_ID is set, only people who can View Channel there are counted; the bot must also be able to view that channel. DISCORD_MEMBER_ROLE_ID, if set, applies as an additional filter.
           </p>
         </div>
       ) : null}
@@ -320,9 +320,13 @@ function MissingMembersTab() {
             ) : null}
           </div>
           <p className="border-t border-line px-4 py-3 text-xs leading-5 text-ink2">
-            {data.scope === "configured-role"
-              ? "Roster scope: members with the configured Discord role."
-              : "Roster scope: all non-bot members of the Discord server. Set DISCORD_MEMBER_ROLE_ID to limit this to your clan role."}
+            {data.scope === "configured-channel-viewers"
+              ? "Roster scope: non-bot members who can View Channel in the configured Discord channel."
+              : data.scope === "configured-role-and-channel"
+                ? "Roster scope: members with the configured role who can also View Channel in the configured Discord channel."
+                : data.scope === "configured-role"
+                  ? "Roster scope: non-bot members with the configured Discord role."
+                  : "Roster scope: all non-bot members of the Discord server."}
           </p>
         </>
       ) : null}
