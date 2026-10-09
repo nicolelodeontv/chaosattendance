@@ -7,6 +7,7 @@ import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
 import { RoleBadge } from "@/components/role-badge";
 import { ROLE_LABELS, type UserRole } from "@/types/roles";
+import { DeadlinePicker } from "@/components/deadline-picker";
 
 type Submission = {
   id: string;
@@ -1803,12 +1804,11 @@ function SettingsTab() {
             <label htmlFor="settings-submission-deadline" className="text-sm font-medium text-ink">
               Submission deadline
             </label>
-            <input
+            <DeadlinePicker
               id="settings-submission-deadline"
-              type="datetime-local"
               value={submissionDeadline}
-              onChange={(e) => {
-                setSubmissionDeadline(e.target.value);
+              onChange={(value) => {
+                setSubmissionDeadline(value);
                 setDeadlineTouched(true);
               }}
             />
