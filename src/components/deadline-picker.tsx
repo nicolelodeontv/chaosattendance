@@ -118,7 +118,18 @@ export function DeadlinePicker({
     const selected = rootRef.current?.querySelectorAll<HTMLButtonElement>(
       ".deadline-picker__time-column button.is-selected"
     );
-    selected?.forEach((button) => button.scrollIntoView({ block: "nearest" }));
+    selected?.forEach((button) => {
+      const column = button.closest<HTMLElement>(".deadline-picker__time-column");
+      if (!column) return;
+
+      const buttonBounds = button.getBoundingClientRect();
+      const columnBounds = column.getBoundingClientRect();
+      if (buttonBounds.top < columnBounds.top) {
+        column.scrollTop -= columnBounds.top - buttonBounds.top;
+      } else if (buttonBounds.bottom > columnBounds.bottom) {
+        column.scrollTop += buttonBounds.bottom - columnBounds.bottom;
+      }
+    });
   }, [open, draft.hour12, draft.minute, draft.pm]);
 
   useEffect(() => {
