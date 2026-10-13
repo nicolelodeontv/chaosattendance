@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOwner } from "@/lib/admin";
+import { getAccessLevel } from "@/lib/admin-access";
+import { canAccessTab } from "@/lib/access-control";
 import { logServerError } from "@/lib/server-error";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -21,7 +23,8 @@ export async function GET() {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  if (!isOwner(user)) {
+  const accessLevel = await getAccessLevel(session);
+  if (!canAccessTab(accessLevel, "recentlyRemoved")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

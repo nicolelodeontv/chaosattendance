@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { canAccessTab, type AccessLevel, type AdminTab } from "@/lib/access-control";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BaseModal } from "@/components/modal";
 import { SuccessDialog } from "@/components/success-dialog";
@@ -40,7 +42,7 @@ type Submission = {
   role: UserRole;
 };
 
-type Tab = "submissions" | "recentlyRemoved" | "roster" | "settings" | "access";
+type Tab = AdminTab;
 type NotificationItem = {
   id: string;
   ign: string;
@@ -102,8 +104,16 @@ function relativeTime(value: string) {
 }
 
 
-export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
-  const [tab, setTab] = useState<Tab>("submissions");
+export function AdminDashboard({
+  accessLevel,
+  initialTab,
+}: {
+  accessLevel: AccessLevel;
+  initialTab: AdminTab;
+}) {
+  const router = useRouter();
+  const isOwner = accessLevel === "owner";
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [notificationTarget, setNotificationTarget] = useState<NotificationTarget | null>(null);
   const [notificationToasts, setNotificationToasts] = useState<ToastItem[]>([]);
   const [submissionChangeEvent, setSubmissionChangeEvent] = useState<SubmissionChangeEvent | null>(null);
@@ -111,13 +121,35 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   const [deletedSubmissionIds, setDeletedSubmissionIds] = useState<string[]>([]);
   const [submissionRefreshVersion, setSubmissionRefreshVersion] = useState(0);
   const submissionChangeVersionRef = useRef(0);
-  const visibleTab: Tab = isOwner || tab === "roster" ? tab : "submissions";
-  const tabs: Tab[] = isOwner
-    ? ["submissions", "recentlyRemoved", "roster", "settings", "access"]
-    : ["submissions", "roster"];
+  const visibleTab: Tab = canAccessTab(accessLevel, tab) ? tab : "submissions";
+  const allTabs: Tab[] = [
+    "submissions",
+    "recentlyRemoved",
+    "roster",
+    "settings",
+    "access",
+  ];
+  const tabs = allTabs.filter((candidate) => canAccessTab(accessLevel, candidate));
+
+  function selectTab(nextTab: Tab) {
+    if (!canAccessTab(accessLevel, nextTab)) {
+      setTab("submissions");
+      router.replace("/admin?tab=submissions", { scroll: false });
+      return;
+    }
+    setTab(nextTab);
+    router.replace("/admin?tab=" + nextTab, { scroll: false });
+  }
+
+  useEffect(() => {
+    if (!canAccessTab(accessLevel, tab)) {
+      setTab("submissions");
+      router.replace("/admin?tab=submissions", { scroll: false });
+    }
+  }, [accessLevel, tab, router]);
 
   function openNotification(item: NotificationItem) {
-    setTab("submissions");
+    selectTab("submissions");
     setNotificationTarget({ id: item.id, ign: item.ign });
   }
 
@@ -161,7 +193,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         {tabs.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => selectTab(t)}
             className={[
               "rounded-lg px-3 py-2 text-sm capitalize transition-colors",
               visibleTab === t ? "bg-cyan/10 text-cyan" : "text-ink2 hover:bg-panel2 hover:text-ink",
@@ -186,13 +218,14 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         />
       )}
       {visibleTab === "roster" && <MissingMembersTab />}
-      {visibleTab === "recentlyRemoved" && isOwner && (
+      {visibleTab === "recentlyRemoved" && canAccessTab(accessLevel, "recentlyRemoved") && (
         <RecentlyRemovedTab
+          isOwner={isOwner}
           onRestored={() => setSubmissionRefreshVersion((version) => version + 1)}
         />
       )}
-      {visibleTab === "settings" && isOwner && <SettingsTab />}
-      {visibleTab === "access" && isOwner && <AccessTab />}
+      {visibleTab === "settings" && canAccessTab(accessLevel, "settings") && <SettingsTab />}
+      {visibleTab === "access" && canAccessTab(accessLevel, "access") && <AccessTab isOwner={isOwner} />}
       </div>
     </div>
   );
@@ -787,7 +820,7 @@ function SubmissionsTab({
           Showing {currentOpRows.length} of {currentOpAllRows.length}
         </p>
       ) : null}
-      <div className="premium-card overflow-hidden">
+      <div className="premium-card">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
         <div>
           <p className="font-display text-sm text-ink">Submission log</p>
@@ -850,31 +883,31 @@ function SubmissionsTab({
         </div>
       </div>
 
-      <div className="w-full overflow-hidden"><table className="data-table w-full table-fixed text-left text-sm">
+      <div className="w-full min-w-0"><table className="data-table w-full table-auto text-left text-sm">
         <thead>
           <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
-            <th title="Op" className="px-2.5 py-3 font-medium sm:px-3">Op</th>
-            <th title="IGN" className="px-2.5 py-3 font-medium sm:px-3">IGN</th>
-            <th title="Discord" className="px-2.5 py-3 font-medium sm:px-3">Discord</th>
-            <th title="Attendance" className="px-2.5 py-3 font-medium sm:px-3">Attendance</th>
-            <th title="Pilot" className="px-2.5 py-3 font-medium sm:px-3">Pilot</th>
-            <th title="Hours" className="px-2.5 py-3 font-medium sm:px-3">Hours</th>
-            <th title="Notes" className="px-2.5 py-3 font-medium sm:px-3">Notes</th>
-            <th title="Submitted" className="px-2.5 py-3 font-medium sm:px-3">Submitted</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3" />
+            <th title="OP" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">OP</th>
+            <th title="IGN" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">IGN</th>
+            <th title="Discord" className="whitespace-normal break-words px-2.5 py-3 font-medium sm:px-3">Discord</th>
+            <th title="Attendance" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Attendance</th>
+            <th title="Pilot" className="whitespace-normal break-words px-2.5 py-3 font-medium sm:px-3">Pilot</th>
+            <th title="Hours" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Hours</th>
+            <th title="Notes" className="whitespace-normal break-words px-2.5 py-3 font-medium sm:px-3">Notes</th>
+            <th title="Submitted" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Submitted</th>
+            <th className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Actions</th>
           </tr>
         </thead>
         <tbody>
           {loading && (
             <tr>
-              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="whitespace-normal break-words [overflow-wrap:anywhere] align-top px-4 py-10 text-center text-ink2">
                 Loading…
               </td>
             </tr>
           )}
           {!loading && filtered.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="whitespace-normal break-words [overflow-wrap:anywhere] align-top px-4 py-10 text-center text-ink2">
                 No submissions found.
               </td>
             </tr>
@@ -889,14 +922,14 @@ function SubmissionsTab({
                 highlightedRowId === r.id ? "bg-cyan/10" : "",
               ].join(" ")}
             >
-              <td className="data-cell px-2.5 py-3 font-display text-xs text-cyan sm:px-3"><span className="data-clip" title={r.opId}>{r.opId}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink sm:px-3">
-                <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
+              <td data-label="OP" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 font-display text-xs text-cyan sm:px-3">{r.opId}</td>
+              <td data-label="IGN" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink sm:px-3">
+                <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => setSelected(r)}
                     title={r.ign}
-                    className="data-clip min-w-0 flex-1 rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50"
+                    className="shrink-0 whitespace-nowrap rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50"
                   >
                     {r.ign}
                   </button>
@@ -908,14 +941,14 @@ function SubmissionsTab({
                   <RoleBadge variant={r.role} />
                 </div>
               </td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.discordUsername}>{r.discordUsername}</span></td>
-              <td className="data-cell px-2.5 py-3 sm:px-3"><span className="data-clip" title={r.attending ? "Attending" : "Not Attending"}><Badge ok={r.attending} yes="Attending" no="Not Attending" /></span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}>{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={String(r.hours)}>{r.hours}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.notes ?? "—"}>{r.notes ?? "—"}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={new Date(r.createdAt).toLocaleString()}>{new Date(r.createdAt).toLocaleDateString()}</span></td>
-              <td className="actions-cell px-2.5 py-3 text-right sm:px-3">
-                <div className="actions-cell__inner">
+              <td data-label="Discord" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.discordUsername}</td>
+              <td data-label="Attendance" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 sm:px-3"><Badge ok={r.attending} yes="Attending" no="Not Attending" /></td>
+              <td data-label="Pilot" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</td>
+              <td data-label="Hours" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hours}</td>
+              <td data-label="Notes" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.notes ?? "—"}</td>
+              <td data-label="Submitted" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink2 sm:px-3">{new Date(r.createdAt).toLocaleDateString()}</td>
+              <td data-label="Actions" className="actions-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-right sm:px-3">
+                <div className="flex flex-nowrap items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setSelected(r)}

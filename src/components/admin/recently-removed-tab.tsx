@@ -56,7 +56,7 @@ function PaginationControls({ page, pageCount, onPageChange, label }: {
   );
 }
 
-export function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
+export function RecentlyRemovedTab({ onRestored, isOwner }: { onRestored: () => void; isOwner: boolean }) {
   const [rows, setRows] = useState<DeletedSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -195,14 +195,16 @@ export function RecentlyRemovedTab({ onRestored }: { onRestored: () => void }) {
             >
               Refresh
             </button>
-            <button
-              type="button"
-              onClick={requestClearArchive}
-              disabled={rows.length === 0 || loading || clearArchiveLoading}
-              className="inline-flex min-h-[42px] shrink-0 items-center justify-center rounded-[10px] border border-red/70 bg-red/5 px-3 text-sm font-semibold text-red transition-colors hover:border-red hover:bg-red/10 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Remove all ({rows.length})
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={requestClearArchive}
+                disabled={rows.length === 0 || loading || clearArchiveLoading}
+                className="inline-flex min-h-[42px] shrink-0 items-center justify-center rounded-[10px] border border-red/70 bg-red/5 px-3 text-sm font-semibold text-red transition-colors hover:border-red hover:bg-red/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Remove all ({rows.length})
+              </button>
+            )}
           </div>
         </div>
 

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isOwner } from "@/lib/admin";
+import { getAccessLevel } from "@/lib/admin-access";
+import { canAccessTab } from "@/lib/access-control";
 
 const DISABLED_WEBHOOK_PREFIX = "__CHAOS_DISCORD_DISABLED__::";
 
@@ -19,8 +20,8 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
-  const user = session.user as any;
-  if (!isOwner(user)) {
+  const accessLevel = await getAccessLevel(session);
+  if (!canAccessTab(accessLevel, "settings")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -45,8 +46,8 @@ export async function PUT(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
-  const user = session.user as any;
-  if (!isOwner(user)) {
+  const accessLevel = await getAccessLevel(session);
+  if (!canAccessTab(accessLevel, "settings")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

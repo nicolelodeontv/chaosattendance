@@ -2,7 +2,8 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isOwner } from "@/lib/admin";
+import { getAccessLevel } from "@/lib/admin-access";
+import { canAccessTab } from "@/lib/access-control";
 import { logServerError } from "@/lib/server-error";
 
 const MEMBER_RESUBMITTED_ERROR =
@@ -20,13 +21,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const session = await auth();
-  const user = session?.user as any;
-
   if (!session) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  if (!isOwner(user)) {
+  const accessLevel = await getAccessLevel(session);
+  if (!canAccessTab(accessLevel, "recentlyRemoved")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

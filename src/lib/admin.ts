@@ -44,7 +44,7 @@ export function isOwner(user: OwnerUser | null | undefined): boolean {
 
 export async function getRole(
   discordId: string | undefined | null,
-  adminDiscordIds?: ReadonlySet<string>
+  adminRoles?: ReadonlyMap<string, "ADMIN" | "MANAGER"> | ReadonlySet<string>
 ): Promise<UserRole> {
   const normalizedDiscordId = discordId?.trim() ?? "";
   if (!normalizedDiscordId || !DISCORD_ID_PATTERN.test(normalizedDiscordId)) {
@@ -53,13 +53,18 @@ export async function getRole(
 
   if (isOwner({ discordId: normalizedDiscordId })) return "owner";
 
-  const ids =
-    adminDiscordIds ??
-    new Set(
-      (await prisma.adminUser.findMany({ select: { discordId: true } })).map((admin) =>
-        admin.discordId.trim()
-      )
-    );
+  if (adminRoles instanceof Map) {
+    const role = adminRoles.get(normalizedDiscordId);
+    return role ? (role.toLowerCase() as "admin" | "manager") : "member";
+  }
 
-  return ids.has(normalizedDiscordId) ? "admin" : "member";
+  if (adminRoles) {
+    return adminRoles.has(normalizedDiscordId) ? "admin" : "member";
+  }
+
+  const admin = await prisma.adminUser.findUnique({
+    where: { discordId: normalizedDiscordId },
+    select: { role: true },
+  });
+  return admin ? (admin.role.toLowerCase() as "admin" | "manager") : "member";
 }
