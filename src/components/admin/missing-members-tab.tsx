@@ -13,7 +13,7 @@ type MissingMembersResponse = {
   scope: "configured-role" | "configured-channel-viewers" | "configured-role-and-channel" | "all-server-members";
 };
 
-function MissingMembersTab() {
+export function MissingMembersTab() {
   const [data, setData] = useState<MissingMembersResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
