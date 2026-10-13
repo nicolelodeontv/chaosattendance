@@ -10,6 +10,7 @@ import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
 import { RoleBadge } from "@/components/role-badge";
 import { DiscordMemberName } from "@/components/discord-member-name";
+import { getDiscordNameParts } from "@/lib/discord-names";
 import { ROLE_LABELS, type UserRole } from "@/types/roles";
 
 const DEFAULT_DISCORD_AVATAR_URL =
@@ -897,33 +898,47 @@ function SubmissionsTab({
       <div className="w-full min-w-0"><table className="data-table w-full table-auto text-left text-sm">
         <thead>
           <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
-            <th title="OP" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">OP</th>
-            <th title="IGN" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">IGN</th>
-            <th title="Discord" className="whitespace-normal break-words px-2.5 py-3 font-medium sm:px-3">Discord</th>
-            <th title="Attendance" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Attendance</th>
-            <th title="Pilot" className="whitespace-normal break-words px-2.5 py-3 font-medium sm:px-3">Pilot</th>
-            <th title="Hours" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Hours</th>
-            <th title="Notes" className="whitespace-normal break-words px-2.5 py-3 font-medium sm:px-3">Notes</th>
-            <th title="Submitted" className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Submitted</th>
-            <th className="w-px min-w-fit whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Actions</th>
+            <th title="OP" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">OP</th>
+            <th title="IGN" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">IGN</th>
+            <th title="Discord" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">Discord</th>
+            <th title="Attendance" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">Attendance</th>
+            <th title="Pilot" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">Pilot</th>
+            <th title="Hours" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">Hours</th>
+            <th title="Notes" className="w-full whitespace-nowrap px-2 py-3 font-medium">Notes</th>
+            <th title="Submitted" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">Submitted</th>
+            <th title="Actions" className="w-px min-w-fit whitespace-nowrap px-2 py-3 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
           {loading && (
             <tr>
-              <td colSpan={9} className="whitespace-normal break-words [overflow-wrap:anywhere] align-top px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="whitespace-nowrap align-middle px-4 py-10 text-center text-ink2">
                 Loading…
               </td>
             </tr>
           )}
           {!loading && filtered.length === 0 && (
             <tr>
-              <td colSpan={9} className="whitespace-normal break-words [overflow-wrap:anywhere] align-top px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="whitespace-nowrap align-middle px-4 py-10 text-center text-ink2">
                 No submissions found.
               </td>
             </tr>
           )}
-          {pagedFiltered.map((r) => (
+          {pagedFiltered.map((r) => {
+            const accountUsername =
+              r.discordAccountUsername?.trim() ||
+              (r.discordUsername.trim() !== "Unknown" ? r.discordUsername.trim() : null);
+            const discordName = getDiscordNameParts(
+              {
+                nick: r.discordNick,
+                globalName: r.discordGlobalName,
+                username: accountUsername,
+              },
+              r.discordUsername,
+              { alwaysShowUsername: true }
+            );
+
+            return (
             <tr
               id={"submission-row-" + r.id}
               key={r.id}
@@ -933,8 +948,8 @@ function SubmissionsTab({
                 highlightedRowId === r.id ? "bg-cyan/10" : "",
               ].join(" ")}
             >
-              <td data-label="OP" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 font-display text-xs text-cyan sm:px-3">{r.opId}</td>
-              <td data-label="IGN" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink sm:px-3">
+              <td data-label="OP" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 font-display text-xs text-cyan">{r.opId}</td>
+              <td data-label="IGN" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink">
                 <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
                   <button
                     type="button"
@@ -952,8 +967,8 @@ function SubmissionsTab({
                   <RoleBadge variant={r.role} />
                 </div>
               </td>
-              <td data-label="Discord" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">
-                <div className="flex flex-nowrap items-center gap-2">
+              <td data-label="Discord" className="data-cell whitespace-nowrap align-middle px-2 py-3 text-ink2">
+                <div className="discord-member-inline flex flex-nowrap items-center gap-2 whitespace-nowrap">
                   <img
                     src={r.discordAvatarUrl || DEFAULT_DISCORD_AVATAR_URL}
                     width={32}
@@ -969,22 +984,20 @@ function SubmissionsTab({
                       image.src = DEFAULT_DISCORD_AVATAR_URL;
                     }}
                   />
-                  <div className="min-w-0 flex-1">
-                    <DiscordMemberName
-                      nick={r.discordNick}
-                      globalName={r.discordGlobalName}
-                      username={r.discordAccountUsername}
-                      fallbackName={r.discordUsername}
-                    />
-                  </div>
+                  <span className="shrink-0 whitespace-nowrap text-sm text-ink">{discordName.primary}</span>
+                  {discordName.secondary.length > 0 ? (
+                    <span className="discord-member-secondary whitespace-nowrap text-xs text-ink2">
+                      {discordName.secondary.join(" · ")}
+                    </span>
+                  ) : null}
                 </div>
               </td>
-              <td data-label="Attendance" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 sm:px-3"><Badge ok={r.attending} yes="Attending" no="Not Attending" /></td>
-              <td data-label="Pilot" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</td>
-              <td data-label="Hours" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hours}</td>
-              <td data-label="Notes" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.notes ?? "—"}</td>
-              <td data-label="Submitted" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink2 sm:px-3">{new Date(r.createdAt).toLocaleDateString()}</td>
-              <td data-label="Actions" className="actions-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-right sm:px-3">
+              <td data-label="Attendance" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3"><Badge ok={r.attending} yes="Attending" no="Not Attending" /></td>
+              <td data-label="Pilot" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink2">{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</td>
+              <td data-label="Hours" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink2">{r.hours}</td>
+              <td data-label="Notes" className="data-cell notes-cell w-full min-w-0 max-w-0 truncate whitespace-nowrap align-middle px-2 py-3 text-ink2" title={r.notes ?? "—"}>{r.notes ?? "—"}</td>
+              <td data-label="Submitted" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink2">{new Date(r.createdAt).toLocaleDateString()}</td>
+              <td data-label="Actions" className="actions-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-right">
                 <div className="flex flex-nowrap items-center justify-end gap-2">
                   <button
                     type="button"
@@ -1010,7 +1023,8 @@ function SubmissionsTab({
                 </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table></div>
       {filtered.length > SUBMISSIONS_PAGE_SIZE ? (
