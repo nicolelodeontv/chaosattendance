@@ -1,23 +1,35 @@
 import type { Metadata, Viewport } from "next";
-import { Rajdhani, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { SiteFooter } from "@/components/site-footer";
 
-const display = Rajdhani({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+const display = localFont({
+  src: [
+    { path: "./fonts/rajdhani-500-latin.woff2", weight: "500" },
+    { path: "./fonts/rajdhani-600-latin.woff2", weight: "600" },
+    { path: "./fonts/rajdhani-700-latin.woff2", weight: "700" },
+  ],
+  display: "swap",
   variable: "--font-display",
 });
 
-const body = Rajdhani({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+const body = localFont({
+  src: [
+    { path: "./fonts/rajdhani-500-latin.woff2", weight: "500" },
+    { path: "./fonts/rajdhani-600-latin.woff2", weight: "600" },
+    { path: "./fonts/rajdhani-700-latin.woff2", weight: "700" },
+  ],
+  display: "swap",
   variable: "--font-body",
 });
 
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const mono = localFont({
+  src: [
+    { path: "./fonts/jetbrainsmono-400-latin.woff2", weight: "400" },
+    { path: "./fonts/jetbrainsmono-400-latin.woff2", weight: "500" },
+    { path: "./fonts/jetbrainsmono-400-latin.woff2", weight: "600" },
+  ],
+  display: "swap",
   variable: "--font-mono",
 });
 
