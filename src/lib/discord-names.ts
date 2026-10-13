@@ -34,7 +34,7 @@ export function getDiscordNameParts(
   if (options.alwaysShowUsername) {
     // In Missing Members, always show the account handle. A global name is
     // redundant only when it matches the primary name, case-insensitively.
-    if (globalName && normalizedName(globalName) !== primaryKey) {
+    if (globalName && globalName.trim().toLocaleLowerCase("en") !== primary.trim().toLocaleLowerCase("en")) {
       secondary.push(globalName);
     }
     if (username) secondary.push("@" + username);
