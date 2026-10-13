@@ -3,22 +3,10 @@ import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { DiscordChannelAccessError, getChannelViewerIds, type DiscordChannelMember } from "@/lib/discord-channel-access";
-
-type DiscordMember = {
-  user?: {
-    id?: unknown;
-    username?: unknown;
-    global_name?: unknown;
-    bot?: unknown;
-  };
-  roles?: unknown;
-};
+import { DiscordRosterFetchError, fetchDiscordRoster, type DiscordRosterMember } from "@/lib/discord-roster";
+import { getDiscordNameParts } from "@/lib/discord-names";
 
 export const dynamic = "force-dynamic";
-
-const DISCORD_API = "https://discord.com/api/v10";
-const PAGE_SIZE = 1000;
-const MAX_PAGES = 20;
 
 export async function GET() {
   const session = await auth();
@@ -68,119 +56,66 @@ export async function GET() {
   });
   const currentOpId = settings?.currentOpId?.trim() || "current";
 
-  let members: Array<{ discordId: string; username: string }> = [];
-  const channelMembers: DiscordChannelMember[] = [];
-  let after = "0";
-  let complete = false;
-
-  for (let page = 0; page < MAX_PAGES; page += 1) {
-    const url = new URL(`${DISCORD_API}/guilds/${guildId}/members`);
-    url.searchParams.set("limit", String(PAGE_SIZE));
-    if (after !== "0") url.searchParams.set("after", after);
-
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        headers: { Authorization: "Bot " + botToken },
-        cache: "no-store",
-      });
-    } catch {
-      return NextResponse.json(
-        { error: "Discord could not be reached. Try refreshing the roster." },
-        { status: 502 }
-      );
-    }
-
-    if (!response.ok) {
+  let roster: DiscordRosterMember[];
+  try {
+    roster = await fetchDiscordRoster({ forceRefresh: true });
+  } catch (error) {
+    if (error instanceof DiscordRosterFetchError) {
+      if (error.code === "network") {
+        return NextResponse.json(
+          { error: "Discord could not be reached. Try refreshing the roster." },
+          { status: 502 }
+        );
+      }
+      if (error.code === "http") {
+        const message =
+          error.status === 401 || error.status === 403
+            ? "Discord rejected the bot credentials or member-list permissions. Check the bot token and enable the Server Members intent."
+            : error.status === 429
+              ? "Discord rate-limited the roster sync. Wait a moment, then refresh."
+              : "Discord roster sync failed with status " + error.status + ".";
+        return NextResponse.json(
+          { error: message, code: "DISCORD_ROSTER_FAILED" },
+          { status: 502 }
+        );
+      }
+      if (error.code === "limit_reached") {
+        return NextResponse.json(
+          {
+            error:
+              "The server roster is larger than the safe sync limit. No partial missing-member list was returned.",
+            code: "ROSTER_LIMIT_REACHED",
+          },
+          { status: 503 }
+        );
+      }
       const message =
-        response.status === 401 || response.status === 403
-          ? "Discord rejected the bot credentials or member-list permissions. Check the bot token and enable the Server Members intent."
-          : response.status === 429
-            ? "Discord rate-limited the roster sync. Wait a moment, then refresh."
-            : "Discord roster sync failed with status " + response.status + ".";
-      return NextResponse.json(
-        { error: message, code: "DISCORD_ROSTER_FAILED" },
-        { status: 502 }
-      );
+        error.code === "invalid_roles"
+          ? "Discord returned an invalid member-role list."
+          : "Discord returned an invalid member list.";
+      return NextResponse.json({ error: message }, { status: 502 });
     }
-
-    const payload: unknown = await response.json().catch(() => null);
-    if (
-      !Array.isArray(payload) ||
-      !payload.every((member) => member && typeof member === "object")
-    ) {
-      return NextResponse.json(
-        { error: "Discord returned an invalid member list." },
-        { status: 502 }
-      );
-    }
-
-    const pageMembers = payload as DiscordMember[];
-    for (const member of pageMembers) {
-      const id = member.user?.id;
-      if (typeof id !== "string" || !/^\d+$/.test(id)) {
-        return NextResponse.json(
-          { error: "Discord returned a member without a valid account ID." },
-          { status: 502 }
-        );
-      }
-      if (
-        (memberRoleId || channelId) &&
-        (!Array.isArray(member.roles) ||
-          !member.roles.every((role) => typeof role === "string"))
-      ) {
-        return NextResponse.json(
-          { error: "Discord returned an invalid member-role list." },
-          { status: 502 }
-        );
-      }
-      if (
-        member.user?.bot === true ||
-        (memberRoleId && !(member.roles as string[]).includes(memberRoleId))
-      ) {
-        continue;
-      }
-      if (channelId) {
-        channelMembers.push({ user: { id }, roles: member.roles as string[] });
-      }
-      const username =
-        (typeof member.user?.global_name === "string" && member.user.global_name.trim()) ||
-        (typeof member.user?.username === "string" && member.user.username.trim()) ||
-        "Unknown member";
-      members.push({ discordId: id, username });
-    }
-
-    if (pageMembers.length < PAGE_SIZE) {
-      complete = true;
-      break;
-    }
-
-    const lastId = pageMembers[pageMembers.length - 1]?.user?.id;
-    if (typeof lastId !== "string" || !/^\d+$/.test(lastId) || lastId === after) {
-      return NextResponse.json(
-        { error: "Discord roster pagination returned an invalid cursor." },
-        { status: 502 }
-      );
-    }
-    after = lastId;
-  }
-
-  if (!complete) {
+    console.error("[missing-members] Roster sync failed", { reason: "unexpected_error" });
     return NextResponse.json(
-      {
-        error:
-          "The server roster is larger than the safe sync limit. No partial missing-member list was returned.",
-        code: "ROSTER_LIMIT_REACHED",
-      },
-      { status: 503 }
+      { error: "Discord roster sync failed. Try refreshing the roster." },
+      { status: 502 }
     );
   }
+
+  // Match and filter exclusively by Discord account ID and configured role IDs.
+  let members = roster.filter(
+    (member) => !memberRoleId || member.roles.includes(memberRoleId)
+  );
+  const channelMembers: DiscordChannelMember[] = members.map((member) => ({
+    user: { id: member.id },
+    roles: member.roles,
+  }));
 
   let scope = memberRoleId ? "configured-role" : "all-server-members";
   if (channelId) {
     try {
       const viewerIds = await getChannelViewerIds(guildId, channelId, channelMembers);
-      members = members.filter((member) => viewerIds.has(member.discordId));
+      members = members.filter((member) => viewerIds.has(member.id));
       scope = memberRoleId ? "configured-role-and-channel" : "configured-channel-viewers";
     } catch (error) {
       if (error instanceof DiscordChannelAccessError) {
@@ -230,8 +165,11 @@ export async function GET() {
   });
   const submittedIds = new Set(submitted.map((row) => row.discordId));
   const missing = members
-    .filter((member) => !submittedIds.has(member.discordId))
-    .sort((a, b) => a.username.localeCompare(b.username));
+    .filter((member) => !submittedIds.has(member.id))
+    .map(({ id, nick, globalName, username }) => ({ id, nick, globalName, username }))
+    .sort((a, b) =>
+      getDiscordNameParts(a).primary.localeCompare(getDiscordNameParts(b).primary)
+    );
 
   return NextResponse.json({
     opId: currentOpId,

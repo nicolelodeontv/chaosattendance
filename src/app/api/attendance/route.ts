@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getRole, isAdmin } from "@/lib/admin";
 import { checkDiscordGuildMembership } from "@/lib/discord-membership";
+import { DiscordRosterFetchError, fetchDiscordRoster, type DiscordRosterMember } from "@/lib/discord-roster";
 import { notifyDiscord } from "@/lib/discord";
 import { logServerError } from "@/lib/server-error";
 import { getSubmissionDeadline, isPastDeadline } from "@/lib/deadline";
@@ -278,7 +279,7 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [submissions, admins, settings] = await Promise.all([
+  const [submissions, admins, settings, roster] = await Promise.all([
     prisma.submission.findMany({
       orderBy: { createdAt: "desc" },
     }),
@@ -287,16 +288,30 @@ export async function GET() {
       where: { id: 1 },
       select: { currentOpId: true },
     }).catch(() => null),
+    fetchDiscordRoster().catch((error: unknown) => {
+      console.warn(
+        "[attendance] Live Discord roster names unavailable",
+        error instanceof DiscordRosterFetchError ? error.code : "unexpected_error"
+      );
+      return [] as DiscordRosterMember[];
+    }),
   ]);
 
   const currentOpId = settings?.currentOpId?.trim() || "current";
   const adminRoles = new Map(admins.map((admin) => [admin.discordId.trim(), admin.role] as const));
+  const rosterById = new Map(roster.map((member) => [member.id, member] as const));
 
   const submissionsWithRoles = await Promise.all(
-    submissions.map(async (submission) => ({
-      ...submission,
-      role: await getRole(submission.discordId, adminRoles),
-    }))
+    submissions.map(async (submission) => {
+      const member = rosterById.get(submission.discordId);
+      return {
+        ...submission,
+        role: await getRole(submission.discordId, adminRoles),
+        discordNick: member?.nick ?? null,
+        discordGlobalName: member?.globalName ?? null,
+        discordAccountUsername: member?.username ?? null,
+      };
+    })
   );
 
   return NextResponse.json({

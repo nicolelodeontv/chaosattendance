@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DiscordMemberName } from "@/components/discord-member-name";
 
-type MissingMember = { discordId: string; username: string };
+type MissingMember = { id: string; nick: string | null; globalName: string | null; username: string };
 type MissingMembersResponse = {
   opId: string;
   rosterCount: number;
@@ -90,8 +91,14 @@ export function MissingMembersTab() {
           </div>
           <div className="border-t border-line">
             {data.missing.map((member) => (
-              <div key={member.discordId} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
-                <span className="min-w-0 truncate text-sm text-ink">{member.username}</span>
+              <div key={member.id} className="flex items-start justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
+                <div className="min-w-0 flex-1">
+                  <DiscordMemberName
+                    nick={member.nick}
+                    globalName={member.globalName}
+                    username={member.username}
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={async () => {
@@ -99,8 +106,8 @@ export function MissingMembersTab() {
                       if (!navigator.clipboard?.writeText) {
                         throw new Error("Clipboard access is unavailable in this browser.");
                       }
-                      await navigator.clipboard.writeText(member.discordId);
-                      setCopiedId(member.discordId);
+                      await navigator.clipboard.writeText(member.id);
+                      setCopiedId(member.id);
                     } catch {
                       setError("Could not copy the Discord ID. Check clipboard permissions and try again.");
                     }
@@ -108,7 +115,7 @@ export function MissingMembersTab() {
                   className="shrink-0 rounded-md border border-line px-2 py-1.5 text-xs text-ink2 transition-colors hover:border-cyan/40 hover:text-cyan"
                   title="Copy Discord account ID"
                 >
-                  {copiedId === member.discordId ? "Copied" : "Copy ID"}
+                  {copiedId === member.id ? "Copied" : "Copy ID"}
                 </button>
               </div>
             ))}
