@@ -556,7 +556,7 @@ body {
   max-width: 100%;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .data-table th,
   .data-table td {
     padding-left: 0.45rem !important;
