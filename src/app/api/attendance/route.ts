@@ -282,7 +282,7 @@ export async function GET() {
     prisma.submission.findMany({
       orderBy: { createdAt: "desc" },
     }),
-    prisma.adminUser.findMany({ select: { discordId: true } }),
+    prisma.adminUser.findMany({ select: { discordId: true, role: true } }),
     prisma.settings.findUnique({
       where: { id: 1 },
       select: { currentOpId: true },
@@ -290,12 +290,12 @@ export async function GET() {
   ]);
 
   const currentOpId = settings?.currentOpId?.trim() || "current";
-  const adminIds = new Set(admins.map((admin) => admin.discordId.trim()));
+  const adminRoles = new Map(admins.map((admin) => [admin.discordId.trim(), admin.role] as const));
 
   const submissionsWithRoles = await Promise.all(
     submissions.map(async (submission) => ({
       ...submission,
-      role: await getRole(submission.discordId, adminIds),
+      role: await getRole(submission.discordId, adminRoles),
     }))
   );
 
