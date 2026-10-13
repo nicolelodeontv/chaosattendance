@@ -2,6 +2,7 @@ import { getDiscordNameParts, type DiscordNameFields } from "@/lib/discord-names
 
 type DiscordMemberNameProps = DiscordNameFields & {
   fallbackName?: string | null;
+  alwaysShowUsername?: boolean;
 };
 
 export function DiscordMemberName({
@@ -9,10 +10,12 @@ export function DiscordMemberName({
   globalName,
   username,
   fallbackName,
+  alwaysShowUsername = false,
 }: DiscordMemberNameProps) {
   const { primary, secondary } = getDiscordNameParts(
     { nick, globalName, username },
-    fallbackName
+    fallbackName,
+    { alwaysShowUsername }
   );
 
   return (

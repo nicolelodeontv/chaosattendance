@@ -166,7 +166,15 @@ export async function GET() {
   const submittedIds = new Set(submitted.map((row) => row.discordId));
   const missing = members
     .filter((member) => !submittedIds.has(member.id))
-    .map(({ id, nick, globalName, username }) => ({ id, nick, globalName, username }))
+    .map(({ id, nick, globalName, username, avatar, memberAvatar, avatarUrl }) => ({
+      id,
+      nick,
+      globalName,
+      username,
+      avatar,
+      memberAvatar,
+      avatarUrl,
+    }))
     .sort((a, b) =>
       getDiscordNameParts(a).primary.localeCompare(getDiscordNameParts(b).primary)
     );

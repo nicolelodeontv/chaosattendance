@@ -20,7 +20,8 @@ function normalizedName(value: string): string {
 
 export function getDiscordNameParts(
   member: DiscordNameFields,
-  fallbackName?: string | null
+  fallbackName?: string | null,
+  options: { alwaysShowUsername?: boolean } = {}
 ): DiscordNameParts {
   const nick = clean(member.nick);
   const globalName = clean(member.globalName);
@@ -29,19 +30,24 @@ export function getDiscordNameParts(
   const primary = nick || globalName || username || fallback || "Unknown member";
   const primaryKey = normalizedName(primary);
   const secondary: string[] = [];
-  const seen = new Set<string>([primaryKey]);
 
-  const candidates = [
-    globalName,
-    username ? "@" + username : null,
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const key = normalizedName(candidate);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    secondary.push(candidate);
+  if (options.alwaysShowUsername) {
+    // In Missing Members, always show the account handle. A global name is
+    // redundant only when it matches the primary name, case-insensitively.
+    if (globalName && normalizedName(globalName) !== primaryKey) {
+      secondary.push(globalName);
+    }
+    if (username) secondary.push("@" + username);
+  } else {
+    const seen = new Set<string>([primaryKey]);
+    const candidates = [globalName, username ? "@" + username : null];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      const key = normalizedName(candidate);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      secondary.push(candidate);
+    }
   }
 
   return { primary, secondary };
