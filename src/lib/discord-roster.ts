@@ -3,16 +3,24 @@ export type DiscordRosterMember = {
   nick: string | null;
   globalName: string | null;
   username: string;
+  // Discord account avatar hash (user.avatar).
+  avatar: string | null;
+  // Guild-specific member avatar hash (member.avatar).
+  memberAvatar: string | null;
+  // Prebuilt static CDN URL, including the appropriate fallback avatar.
+  avatarUrl: string;
   roles: string[];
 };
 
 type DiscordApiGuildMember = {
   nick?: unknown;
+  avatar?: unknown;
   roles?: unknown;
   user?: {
     id?: unknown;
     username?: unknown;
     global_name?: unknown;
+    avatar?: unknown;
     bot?: unknown;
   };
 };
@@ -43,6 +51,28 @@ const CACHE_TTL_MS = 15_000;
 let cachedRoster:
   | { guildId: string; expiresAt: number; members: DiscordRosterMember[] }
   | null = null;
+
+function buildDiscordAvatarUrl({
+  guildId,
+  userId,
+  memberAvatar,
+  userAvatar,
+}: {
+  guildId: string;
+  userId: string;
+  memberAvatar: string | null;
+  userAvatar: string | null;
+}): string {
+  if (memberAvatar) {
+    return `https://cdn.discordapp.com/guilds/${guildId}/users/${userId}/avatars/${memberAvatar}.webp?size=64`;
+  }
+  if (userAvatar) {
+    return `https://cdn.discordapp.com/avatars/${userId}/${userAvatar}.webp?size=64`;
+  }
+
+  const defaultIndex = Number((BigInt(userId) >> BigInt(22)) % BigInt(6));
+  return `https://cdn.discordapp.com/embed/avatars/${defaultIndex}.png`;
+}
 
 function cleanName(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -117,11 +147,22 @@ export async function fetchDiscordRoster(options: {
       // Bots are intentionally excluded from every consumer of this roster.
       if (member.user?.bot === true) continue;
 
+      const avatar = cleanName(member.user?.avatar);
+      const memberAvatar = cleanName(member.avatar);
+
       members.push({
         id,
         nick: cleanName(member.nick),
         globalName: cleanName(member.user?.global_name),
         username: cleanName(member.user?.username) ?? "Unknown member",
+        avatar,
+        memberAvatar,
+        avatarUrl: buildDiscordAvatarUrl({
+          guildId,
+          userId: id,
+          memberAvatar,
+          userAvatar: avatar,
+        }),
         roles: member.roles as string[],
       });
     }

@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { DiscordMemberName } from "@/components/discord-member-name";
 
-type MissingMember = { id: string; nick: string | null; globalName: string | null; username: string };
+type MissingMember = {
+  id: string;
+  nick: string | null;
+  globalName: string | null;
+  username: string;
+  avatar: string | null;
+  memberAvatar: string | null;
+  avatarUrl: string;
+};
 type MissingMembersResponse = {
   opId: string;
   rosterCount: number;
@@ -13,6 +21,13 @@ type MissingMembersResponse = {
   syncedAt: string;
   scope: "configured-role" | "configured-channel-viewers" | "configured-role-and-channel" | "all-server-members";
 };
+
+const ROSTER_STALE_AFTER_MS = 5 * 60 * 1000;
+const FALLBACK_AVATAR_URL = "https://cdn.discordapp.com/embed/avatars/0.png";
+
+// This module-level cache survives when the admin console switches tabs and
+// React unmounts MissingMembersTab. The API is refreshed only after 5 minutes.
+let cachedRosterResponse: MissingMembersResponse | null = null;
 
 export function MissingMembersTab() {
   const [data, setData] = useState<MissingMembersResponse | null>(null);
@@ -31,7 +46,9 @@ export function MissingMembersTab() {
       if (!response.ok) {
         throw new Error(payload.error || "Unable to sync the Discord roster.");
       }
-      setData(payload as MissingMembersResponse);
+      const rosterResponse = payload as MissingMembersResponse;
+      cachedRosterResponse = rosterResponse;
+      setData(rosterResponse);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unable to sync the Discord roster.");
     } finally {
@@ -40,6 +57,17 @@ export function MissingMembersTab() {
   }
 
   useEffect(() => {
+    const cached = cachedRosterResponse;
+    const syncedAt = cached ? Date.parse(cached.syncedAt) : Number.NaN;
+    const isFresh = Number.isFinite(syncedAt) &&
+      Date.now() - syncedAt < ROSTER_STALE_AFTER_MS;
+
+    if (cached && isFresh) {
+      setData(cached);
+      setError("");
+      return;
+    }
+
     void refresh();
   }, []);
 
@@ -91,12 +119,28 @@ export function MissingMembersTab() {
           </div>
           <div className="border-t border-line">
             {data.missing.map((member) => (
-              <div key={member.id} className="flex items-start justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
+              <div key={member.id} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0">
+                <img
+                  src={member.avatarUrl}
+                  width={36}
+                  height={36}
+                  loading="lazy"
+                  decoding="async"
+                  alt=""
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                  onError={(event) => {
+                    const image = event.currentTarget;
+                    if (image.dataset.fallbackApplied === "true") return;
+                    image.dataset.fallbackApplied = "true";
+                    image.src = FALLBACK_AVATAR_URL;
+                  }}
+                />
                 <div className="min-w-0 flex-1">
                   <DiscordMemberName
                     nick={member.nick}
                     globalName={member.globalName}
                     username={member.username}
+                    alwaysShowUsername
                   />
                 </div>
                 <button
