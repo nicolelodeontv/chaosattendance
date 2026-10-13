@@ -473,7 +473,7 @@ body {
 }
 
 
-/* Full-value table cells: only Discord, Pilot and Notes wrap. */
+/* Compact submission-table cells stay on one line; Notes alone truncates on desktop. */
 .data-clip {
   display: block;
   min-width: 0;
@@ -485,7 +485,7 @@ body {
 
 .data-cell {
   min-width: 0;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .data-table {
@@ -500,7 +500,7 @@ body {
   max-width: none;
   overflow: visible;
   text-overflow: clip;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .data-table th.whitespace-nowrap {
@@ -540,10 +540,23 @@ body {
 .data-table th:nth-child(3),
 .data-table td:nth-child(3),
 .data-table th:nth-child(5),
-.data-table td:nth-child(5),
+.data-table td:nth-child(5) {
+  width: 1px;
+  min-width: fit-content;
+}
+
 .data-table th:nth-child(7),
 .data-table td:nth-child(7) {
   width: auto;
+}
+
+.data-table td.notes-cell {
+  width: auto;
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .data-table .actions-cell {
@@ -634,6 +647,37 @@ body {
 
   .data-table .actions-cell__inner {
     width: auto;
+  }
+
+  .data-table tbody td:not(.notes-cell) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .data-table tbody td.notes-cell {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .discord-member-inline {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .discord-member-inline > span,
+  .discord-member-secondary {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .data-table tbody td[data-label="IGN"] > div {
+    flex-wrap: wrap;
+    white-space: normal;
   }
 }
 
