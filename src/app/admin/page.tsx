@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import type { Metadata } from "next";
-import { isAdmin, isOwner } from "@/lib/admin";
+import { getAccessLevel } from "@/lib/admin-access";
+import { canAccessTab, isAdminTab, type AdminTab } from "@/lib/access-control";
 import { prisma } from "@/lib/prisma";
 import { Navbar } from "@/components/navbar";
 import { AdminDashboard } from "@/components/admin-dashboard";
@@ -10,13 +11,27 @@ export const metadata: Metadata = {
   title: "Admin",
 };
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams?: { tab?: string };
+}) {
   const session = await auth();
-  const user = session?.user as any;
+  const accessLevel = await getAccessLevel(session);
 
-  if (!(await isAdmin(user?.discordId))) {
+  if (!accessLevel) {
     redirect("/");
   }
+
+  const requestedTab = searchParams?.tab;
+  if (
+    requestedTab &&
+    (!isAdminTab(requestedTab) || !canAccessTab(accessLevel, requestedTab))
+  ) {
+    redirect("/admin?tab=submissions");
+  }
+  const initialTab: AdminTab =
+    requestedTab && isAdminTab(requestedTab) ? requestedTab : "submissions";
 
   const settings = await prisma.settings
     .findUnique({ where: { id: 1 } })
@@ -32,7 +47,7 @@ export default async function AdminPage() {
           <p className="mt-1 text-sm text-ink2">Submissions, notifications and access control.</p>
         </div>
         <div className="mt-6">
-          <AdminDashboard isOwner={isOwner(user)} />
+          <AdminDashboard accessLevel={accessLevel} initialTab={initialTab} />
         </div>
       </main>
     </div>
