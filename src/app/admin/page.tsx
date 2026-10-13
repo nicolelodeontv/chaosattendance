@@ -41,7 +41,7 @@ export default async function AdminPage({
   return (
     <div className="site-page">
       <Navbar guildName={guildName} />
-      <main className="mx-auto w-full max-w-5xl px-5 py-6 sm:py-8">
+      <main className="mx-auto w-full max-w-[1400px] px-5 py-6 sm:py-8">
         <div className="shrink-0">
           <h1 className="font-display text-xl text-ink">Admin console</h1>
           <p className="mt-1 text-sm text-ink2">Submissions, notifications and access control.</p>
