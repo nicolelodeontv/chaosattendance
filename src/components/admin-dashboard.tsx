@@ -122,13 +122,14 @@ export function AdminDashboard({
   const [submissionRefreshVersion, setSubmissionRefreshVersion] = useState(0);
   const submissionChangeVersionRef = useRef(0);
   const visibleTab: Tab = canAccessTab(accessLevel, tab) ? tab : "submissions";
-  const tabs: Tab[] = [
+  const allTabs: Tab[] = [
     "submissions",
     "recentlyRemoved",
     "roster",
     "settings",
     "access",
-  ].filter((candidate) => canAccessTab(accessLevel, candidate));
+  ];
+  const tabs = allTabs.filter((candidate) => canAccessTab(accessLevel, candidate));
 
   function selectTab(nextTab: Tab) {
     if (!canAccessTab(accessLevel, nextTab)) {
