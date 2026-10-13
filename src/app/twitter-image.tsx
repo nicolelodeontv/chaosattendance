@@ -5,8 +5,6 @@ export const alt = "CHAOS / Attendance Tracker";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const logoSrc = "https://chaosattendance.vercel.app/chaos-clan-logo.jpg";
-
 export default function Image() {
   return new ImageResponse(
     (
@@ -33,7 +31,7 @@ export default function Image() {
           borderRadius: 30,
           background: "#000000",
         }}>
-          <img src={logoSrc} width="230" height="230" style={{ objectFit: "cover", borderRadius: 20 }} />
+          <span style={{ color: "#F97316", fontSize: 160, fontWeight: 700, lineHeight: 1 }}>C</span>
         </div>
         <div style={{
           width: 730,
