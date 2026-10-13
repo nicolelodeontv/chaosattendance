@@ -13,7 +13,7 @@ export async function getAccessLevel(
   const discordId =
     typeof user?.discordId === "string" ? user.discordId.trim() : "";
 
-  if (!/^\\d+$/.test(discordId)) return null;
+  if (!/^\d+$/.test(discordId)) return null;
   if (isOwner({ discordId })) return "owner";
 
   const admin = await prisma.adminUser.findUnique({
