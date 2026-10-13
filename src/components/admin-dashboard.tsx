@@ -820,7 +820,7 @@ function SubmissionsTab({
           Showing {currentOpRows.length} of {currentOpAllRows.length}
         </p>
       ) : null}
-      <div className="premium-card overflow-hidden">
+      <div className="premium-card">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
         <div>
           <p className="font-display text-sm text-ink">Submission log</p>
