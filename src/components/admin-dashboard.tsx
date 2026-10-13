@@ -12,6 +12,9 @@ import { RoleBadge } from "@/components/role-badge";
 import { DiscordMemberName } from "@/components/discord-member-name";
 import { ROLE_LABELS, type UserRole } from "@/types/roles";
 
+const DEFAULT_DISCORD_AVATAR_URL =
+  "https://cdn.discordapp.com/embed/avatars/0.png";
+
 const MissingMembersTab = dynamic(
   () => import("@/components/admin/missing-members-tab").then((mod) => mod.MissingMembersTab),
   { loading: () => <p className="text-sm text-ink2">Loading roster…</p> }
@@ -36,6 +39,7 @@ type Submission = {
   discordNick: string | null;
   discordGlobalName: string | null;
   discordAccountUsername: string | null;
+  discordAvatarUrl: string | null;
   ign: string;
   attending: boolean;
   hasPilot: boolean;
@@ -949,13 +953,32 @@ function SubmissionsTab({
                 </div>
               </td>
               <td data-label="Discord" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">
+                <div className="flex flex-nowrap items-center gap-2">
+                  <img
+                    src={r.discordAvatarUrl || DEFAULT_DISCORD_AVATAR_URL}
+                    width={32}
+                    height={32}
+                    loading="lazy"
+                    decoding="async"
+                    alt=""
+                    className="h-8 w-8 shrink-0 rounded-full object-cover"
+                    onError={(event) => {
+                      const image = event.currentTarget;
+                      if (image.dataset.fallbackApplied === "true") return;
+                      image.dataset.fallbackApplied = "true";
+                      image.src = DEFAULT_DISCORD_AVATAR_URL;
+                    }}
+                  />
+                  <div className="min-w-0 flex-1">
                     <DiscordMemberName
                       nick={r.discordNick}
                       globalName={r.discordGlobalName}
                       username={r.discordAccountUsername}
                       fallbackName={r.discordUsername}
                     />
-                  </td>
+                  </div>
+                </div>
+              </td>
               <td data-label="Attendance" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 sm:px-3"><Badge ok={r.attending} yes="Attending" no="Not Attending" /></td>
               <td data-label="Pilot" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</td>
               <td data-label="Hours" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hours}</td>
@@ -1085,6 +1108,50 @@ function SubmissionDetailModal({
   onReset: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const discordId = selected.discordId?.trim() ?? "";
+
+    setAvatarUrl(null);
+    setAvatarLoading(true);
+
+    if (!/^\d{17,20}$/.test(discordId)) {
+      setAvatarUrl(DEFAULT_DISCORD_AVATAR_URL);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    async function loadCurrentAvatar() {
+      try {
+        const response = await fetch(
+          `/api/admin/discord-avatar?discordId=${encodeURIComponent(discordId)}`,
+          { cache: "no-store" }
+        );
+        if (!response.ok) throw new Error("Unable to load Discord avatar");
+
+        const payload = (await response.json()) as { avatarUrl?: unknown };
+        const nextAvatarUrl =
+          typeof payload.avatarUrl === "string" &&
+          payload.avatarUrl.startsWith("https://cdn.discordapp.com/")
+            ? payload.avatarUrl
+            : DEFAULT_DISCORD_AVATAR_URL;
+
+        if (!cancelled) setAvatarUrl(nextAvatarUrl);
+      } catch {
+        if (!cancelled) setAvatarUrl(DEFAULT_DISCORD_AVATAR_URL);
+      }
+    }
+
+    void loadCurrentAvatar();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selected.discordId]);
 
   return (
     <BaseModal
@@ -1139,17 +1206,51 @@ function SubmissionDetailModal({
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink2">
             Discord
           </p>
-          <div className="mt-1">
-            <DiscordMemberName
-              nick={selected.discordNick}
-              globalName={selected.discordGlobalName}
-              username={selected.discordAccountUsername}
-              fallbackName={selected.discordUsername}
-            />
+          <div className="mt-2 flex items-center gap-3">
+            <div className="relative h-14 w-14 shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  width={56}
+                  height={56}
+                  loading="lazy"
+                  decoding="async"
+                  alt=""
+                  className={`h-14 w-14 rounded-full object-cover ${
+                    avatarLoading ? "opacity-0" : "opacity-100"
+                  }`}
+                  onLoad={() => setAvatarLoading(false)}
+                  onError={(event) => {
+                    const image = event.currentTarget;
+                    if (image.dataset.fallbackApplied === "true") {
+                      setAvatarLoading(false);
+                      return;
+                    }
+                    image.dataset.fallbackApplied = "true";
+                    image.src = DEFAULT_DISCORD_AVATAR_URL;
+                    setAvatarUrl(DEFAULT_DISCORD_AVATAR_URL);
+                  }}
+                />
+              ) : null}
+              {avatarLoading ? (
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 animate-pulse rounded-full border border-line bg-panel2"
+                />
+              ) : null}
+            </div>
+            <div className="min-w-0 flex-1">
+              <DiscordMemberName
+                nick={selected.discordNick}
+                globalName={selected.discordGlobalName}
+                username={selected.discordAccountUsername}
+                fallbackName={selected.discordUsername}
+              />
+              <p className="mt-2 break-all text-xs text-ink2">
+                ID: {selected.discordId || "—"}
+              </p>
+            </div>
           </div>
-          <p className="mt-2 break-all text-xs text-ink2">
-            ID: {selected.discordId}
-          </p>
         </div>
         <SummaryItem label="IGN" value={selected.ign} />
         <SummaryItem

@@ -310,6 +310,7 @@ export async function GET() {
         discordNick: member?.nick ?? null,
         discordGlobalName: member?.globalName ?? null,
         discordAccountUsername: member?.username ?? null,
+        discordAvatarUrl: member?.avatarUrl ?? null,
       };
     })
   );
