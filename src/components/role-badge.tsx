@@ -3,6 +3,7 @@ import { ROLE_LABELS, type UserRole } from "@/types/roles";
 const ROLE_MODIFIERS: Record<UserRole, string> = {
   owner: "role-badge--owner",
   admin: "role-badge--admin",
+  manager: "role-badge--admin",
   member: "role-badge--member",
 };
 
