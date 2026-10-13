@@ -2,6 +2,37 @@ export type DiscordMembershipStatus = "member" | "not_member" | "unavailable";
 
 const NOT_MEMBER_DISCORD_CODES = new Set([10007, 10013]);
 
+// Reuse recent positive bot-token checks on warm serverless instances.
+// Negative and unavailable results are never cached, so revoked/new access and
+// temporary Discord outages are picked up immediately on the next request.
+const MEMBER_CACHE_TTL_MS = 30_000;
+const MAX_CACHED_MEMBERS = 500;
+const memberCache = new Map<string, number>();
+
+function hasCachedMembership(key: string): boolean {
+  const expiresAt = memberCache.get(key);
+  if (!expiresAt) return false;
+  if (expiresAt <= Date.now()) {
+    memberCache.delete(key);
+    return false;
+  }
+  return true;
+}
+
+function cacheMembership(key: string): void {
+  const now = Date.now();
+  if (memberCache.size >= MAX_CACHED_MEMBERS) {
+    for (const [cachedKey, expiresAt] of memberCache) {
+      if (expiresAt <= now) memberCache.delete(cachedKey);
+    }
+    if (memberCache.size >= MAX_CACHED_MEMBERS) {
+      const oldestKey = memberCache.keys().next().value;
+      if (oldestKey) memberCache.delete(oldestKey);
+    }
+  }
+  memberCache.set(key, now + MEMBER_CACHE_TTL_MS);
+}
+
 function parseDiscordErrorCode(payload: unknown): number | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const code = (payload as { code?: unknown }).code;
@@ -35,6 +66,12 @@ export async function checkDiscordGuildMembership(
       guildIdLength: guildId.length,
     });
     return "unavailable";
+  }
+
+  // OAuth-token checks have separate authorization semantics and are not cached.
+  const cacheKey = `${guildId}:${memberRoleId}:${discordId}`;
+  if (!accessToken && hasCachedMembership(cacheKey)) {
+    return "member";
   }
 
   try {
@@ -99,6 +136,7 @@ export async function checkDiscordGuildMembership(
       }
 
       const result = roles.includes(memberRoleId) ? "member" : "not_member";
+      if (result === "member" && !accessToken) cacheMembership(cacheKey);
 
       console.info("Discord guild membership lookup:", {
         guildIdLength: guildId.length,
@@ -112,6 +150,7 @@ export async function checkDiscordGuildMembership(
       return result;
     }
 
+    if (!accessToken) cacheMembership(cacheKey);
     console.info("Discord guild membership lookup:", {
       guildIdLength: guildId.length,
       status: response.status,
