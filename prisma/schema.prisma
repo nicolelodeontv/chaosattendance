@@ -50,11 +50,17 @@ model DeletedSubmission {
   @@index([discordId])
 }
 
+enum AdminRole {
+  ADMIN
+  MANAGER
+}
+
 model AdminUser {
-  discordId String   @id
+  discordId String    @id
   username  String
+  role      AdminRole @default(ADMIN)
   addedBy   String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 model Settings {
