@@ -63,18 +63,16 @@ export default async function Home({
   searchParams: { authRequired?: string; error?: string };
 }) {
   const session = await auth();
-  const settings = await prisma.settings
-    .findUnique({ where: { id: 1 } })
-    .catch(() => null);
+  const user = session?.user as any;
+  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
+  const [settings, membership] = await Promise.all([
+    prisma.settings.findUnique({ where: { id: 1 } }).catch(() => null),
+    session?.user && discordId ? getMembership(discordId) : Promise.resolve(null),
+  ]);
   const guildName = settings?.guildName ?? "Squadron";
   const currentOpId = settings?.currentOpId?.trim() || "current";
   const submissionDeadline = settings?.submissionDeadline ?? null;
   const deadlinePassed = isPastDeadline(submissionDeadline);
-  const user = session?.user as any;
-  const discordId = typeof user?.discordId === "string" ? user.discordId.trim() : "";
-  const membership = session?.user && discordId
-    ? await getMembership(discordId)
-    : null;
   const isChaosMember = membership === "member";
   console.info("[attendance-page] membership gate", {
     branch:
