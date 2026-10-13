@@ -4,8 +4,6 @@ export const runtime = "edge";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-const logoSrc = "https://chaosattendance.vercel.app/chaos-clan-logo.jpg";
-
 export default function AppleIcon() {
   return new ImageResponse(
     (
@@ -19,7 +17,7 @@ export default function AppleIcon() {
         borderRadius: 36,
         overflow: "hidden",
       }}>
-        <img src={logoSrc} width="180" height="180" style={{ objectFit: "cover" }} />
+        <span style={{ color: "#F97316", fontSize: 124, fontWeight: 700, lineHeight: 1 }}>C</span>
       </div>
     ),
     size
