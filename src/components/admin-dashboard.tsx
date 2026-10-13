@@ -883,31 +883,31 @@ function SubmissionsTab({
         </div>
       </div>
 
-      <div className="w-full overflow-hidden"><table className="data-table w-full table-fixed text-left text-sm">
+      <div className="w-full min-w-0"><table className="data-table w-full table-auto text-left text-sm">
         <thead>
           <tr className="border-b border-line bg-panel2/65 text-xs uppercase tracking-[0.08em] text-ink2">
-            <th title="Op" className="px-2.5 py-3 font-medium sm:px-3">Op</th>
-            <th title="IGN" className="px-2.5 py-3 font-medium sm:px-3">IGN</th>
-            <th title="Discord" className="px-2.5 py-3 font-medium sm:px-3">Discord</th>
-            <th title="Attendance" className="px-2.5 py-3 font-medium sm:px-3">Attendance</th>
-            <th title="Pilot" className="px-2.5 py-3 font-medium sm:px-3">Pilot</th>
-            <th title="Hours" className="px-2.5 py-3 font-medium sm:px-3">Hours</th>
-            <th title="Notes" className="px-2.5 py-3 font-medium sm:px-3">Notes</th>
-            <th title="Submitted" className="px-2.5 py-3 font-medium sm:px-3">Submitted</th>
-            <th className="px-2.5 py-3 font-medium sm:px-3" />
+            <th title="Op" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Op</th>
+            <th title="IGN" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">IGN</th>
+            <th title="Discord" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Discord</th>
+            <th title="Attendance" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Attendance</th>
+            <th title="Pilot" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Pilot</th>
+            <th title="Hours" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Hours</th>
+            <th title="Notes" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Notes</th>
+            <th title="Submitted" className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Submitted</th>
+            <th className="whitespace-nowrap px-2.5 py-3 font-medium sm:px-3">Actions</th>
           </tr>
         </thead>
         <tbody>
           {loading && (
             <tr>
-              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="whitespace-normal break-words [overflow-wrap:anywhere] align-top px-4 py-10 text-center text-ink2">
                 Loading…
               </td>
             </tr>
           )}
           {!loading && filtered.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-4 py-10 text-center text-ink2">
+              <td colSpan={9} className="whitespace-normal break-words [overflow-wrap:anywhere] align-top px-4 py-10 text-center text-ink2">
                 No submissions found.
               </td>
             </tr>
@@ -922,14 +922,14 @@ function SubmissionsTab({
                 highlightedRowId === r.id ? "bg-cyan/10" : "",
               ].join(" ")}
             >
-              <td className="data-cell px-2.5 py-3 font-display text-xs text-cyan sm:px-3"><span className="data-clip" title={r.opId}>{r.opId}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink sm:px-3">
-                <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden">
+              <td data-label="Op" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 font-display text-xs text-cyan sm:px-3">{r.opId}</td>
+              <td data-label="IGN" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink sm:px-3">
+                <div className="flex min-w-0 flex-wrap items-start gap-2 [overflow-wrap:anywhere]">
                   <button
                     type="button"
                     onClick={() => setSelected(r)}
                     title={r.ign}
-                    className="data-clip min-w-0 flex-1 rounded text-left font-medium hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50"
+                    className="min-w-0 flex-[1_1_10rem] rounded text-left font-medium [overflow-wrap:anywhere] hover:text-cyan focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50"
                   >
                     {r.ign}
                   </button>
@@ -941,13 +941,13 @@ function SubmissionsTab({
                   <RoleBadge variant={r.role} />
                 </div>
               </td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.discordUsername}>{r.discordUsername}</span></td>
-              <td className="data-cell px-2.5 py-3 sm:px-3"><span className="data-clip" title={r.attending ? "Attending" : "Not Attending"}><Badge ok={r.attending} yes="Attending" no="Not Attending" /></span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}>{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={String(r.hours)}>{r.hours}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={r.notes ?? "—"}>{r.notes ?? "—"}</span></td>
-              <td className="data-cell px-2.5 py-3 text-ink2 sm:px-3"><span className="data-clip" title={new Date(r.createdAt).toLocaleString()}>{new Date(r.createdAt).toLocaleDateString()}</span></td>
-              <td className="actions-cell px-2.5 py-3 text-right sm:px-3">
+              <td data-label="Discord" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.discordUsername}</td>
+              <td data-label="Attendance" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 sm:px-3"><Badge ok={r.attending} yes="Attending" no="Not Attending" /></td>
+              <td data-label="Pilot" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</td>
+              <td data-label="Hours" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hours}</td>
+              <td data-label="Notes" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.notes ?? "—"}</td>
+              <td data-label="Submitted" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{new Date(r.createdAt).toLocaleDateString()}</td>
+              <td data-label="Actions" className="actions-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-right sm:px-3">
                 <div className="actions-cell__inner">
                   <button
                     type="button"
