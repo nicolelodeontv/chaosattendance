@@ -9,6 +9,7 @@ import { BaseModal } from "@/components/modal";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ToastContainer, type ToastItem } from "@/components/toast";
 import { RoleBadge } from "@/components/role-badge";
+import { DiscordMemberName } from "@/components/discord-member-name";
 import { ROLE_LABELS, type UserRole } from "@/types/roles";
 
 const MissingMembersTab = dynamic(
@@ -32,6 +33,9 @@ type Submission = {
   discordId: string;
   opId: string;
   discordUsername: string;
+  discordNick: string | null;
+  discordGlobalName: string | null;
+  discordAccountUsername: string | null;
   ign: string;
   attending: boolean;
   hasPilot: boolean;
@@ -759,7 +763,10 @@ function SubmissionsTab({
       row.opId.toLowerCase().includes(query) ||
       row.ign.toLowerCase().includes(query) ||
       ROLE_LABELS[row.role].toLowerCase().includes(query) ||
-      row.discordUsername.toLowerCase().includes(query)
+      row.discordUsername.toLowerCase().includes(query) ||
+      (row.discordNick ?? "").toLowerCase().includes(query) ||
+      (row.discordGlobalName ?? "").toLowerCase().includes(query) ||
+      (row.discordAccountUsername ?? "").toLowerCase().includes(query)
     );
   }
 
@@ -941,7 +948,14 @@ function SubmissionsTab({
                   <RoleBadge variant={r.role} />
                 </div>
               </td>
-              <td data-label="Discord" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.discordUsername}</td>
+              <td data-label="Discord" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">
+                    <DiscordMemberName
+                      nick={r.discordNick}
+                      globalName={r.discordGlobalName}
+                      username={r.discordAccountUsername}
+                      fallbackName={r.discordUsername}
+                    />
+                  </td>
               <td data-label="Attendance" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 sm:px-3"><Badge ok={r.attending} yes="Attending" no="Not Attending" /></td>
               <td data-label="Pilot" className="data-cell whitespace-normal break-words [overflow-wrap:anywhere] align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</td>
               <td data-label="Hours" className="data-cell w-px min-w-fit whitespace-nowrap align-top px-2.5 py-3 text-ink2 sm:px-3">{r.hours}</td>
@@ -1121,6 +1135,22 @@ function SubmissionDetailModal({
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-md border border-line bg-panel2/50 p-3 sm:col-span-2">
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink2">
+            Discord
+          </p>
+          <div className="mt-1">
+            <DiscordMemberName
+              nick={selected.discordNick}
+              globalName={selected.discordGlobalName}
+              username={selected.discordAccountUsername}
+              fallbackName={selected.discordUsername}
+            />
+          </div>
+          <p className="mt-2 break-all text-xs text-ink2">
+            ID: {selected.discordId}
+          </p>
+        </div>
         <SummaryItem label="IGN" value={selected.ign} />
         <SummaryItem
           label="Attendance"
