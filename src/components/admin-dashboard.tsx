@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { canAccessTab, type AccessLevel, type AdminTab } from "@/lib/access-control";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BaseModal } from "@/components/modal";
 import { SuccessDialog } from "@/components/success-dialog";
@@ -40,7 +42,7 @@ type Submission = {
   role: UserRole;
 };
 
-type Tab = "submissions" | "recentlyRemoved" | "roster" | "settings" | "access";
+type Tab = AdminTab;
 type NotificationItem = {
   id: string;
   ign: string;
@@ -102,8 +104,16 @@ function relativeTime(value: string) {
 }
 
 
-export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
-  const [tab, setTab] = useState<Tab>("submissions");
+export function AdminDashboard({
+  accessLevel,
+  initialTab,
+}: {
+  accessLevel: AccessLevel;
+  initialTab: AdminTab;
+}) {
+  const router = useRouter();
+  const isOwner = accessLevel === "owner";
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [notificationTarget, setNotificationTarget] = useState<NotificationTarget | null>(null);
   const [notificationToasts, setNotificationToasts] = useState<ToastItem[]>([]);
   const [submissionChangeEvent, setSubmissionChangeEvent] = useState<SubmissionChangeEvent | null>(null);
@@ -111,13 +121,34 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
   const [deletedSubmissionIds, setDeletedSubmissionIds] = useState<string[]>([]);
   const [submissionRefreshVersion, setSubmissionRefreshVersion] = useState(0);
   const submissionChangeVersionRef = useRef(0);
-  const visibleTab: Tab = isOwner || tab === "roster" ? tab : "submissions";
-  const tabs: Tab[] = isOwner
-    ? ["submissions", "recentlyRemoved", "roster", "settings", "access"]
-    : ["submissions", "roster"];
+  const visibleTab: Tab = canAccessTab(accessLevel, tab) ? tab : "submissions";
+  const tabs: Tab[] = [
+    "submissions",
+    "recentlyRemoved",
+    "roster",
+    "settings",
+    "access",
+  ].filter((candidate) => canAccessTab(accessLevel, candidate));
+
+  function selectTab(nextTab: Tab) {
+    if (!canAccessTab(accessLevel, nextTab)) {
+      setTab("submissions");
+      router.replace("/admin?tab=submissions", { scroll: false });
+      return;
+    }
+    setTab(nextTab);
+    router.replace("/admin?tab=" + nextTab, { scroll: false });
+  }
+
+  useEffect(() => {
+    if (!canAccessTab(accessLevel, tab)) {
+      setTab("submissions");
+      router.replace("/admin?tab=submissions", { scroll: false });
+    }
+  }, [accessLevel, tab, router]);
 
   function openNotification(item: NotificationItem) {
-    setTab("submissions");
+    selectTab("submissions");
     setNotificationTarget({ id: item.id, ign: item.ign });
   }
 
@@ -161,7 +192,7 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         {tabs.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => selectTab(t)}
             className={[
               "rounded-lg px-3 py-2 text-sm capitalize transition-colors",
               visibleTab === t ? "bg-cyan/10 text-cyan" : "text-ink2 hover:bg-panel2 hover:text-ink",
@@ -186,13 +217,14 @@ export function AdminDashboard({ isOwner }: { isOwner: boolean }) {
         />
       )}
       {visibleTab === "roster" && <MissingMembersTab />}
-      {visibleTab === "recentlyRemoved" && isOwner && (
+      {visibleTab === "recentlyRemoved" && canAccessTab(accessLevel, "recentlyRemoved") && (
         <RecentlyRemovedTab
+          isOwner={isOwner}
           onRestored={() => setSubmissionRefreshVersion((version) => version + 1)}
         />
       )}
-      {visibleTab === "settings" && isOwner && <SettingsTab />}
-      {visibleTab === "access" && isOwner && <AccessTab />}
+      {visibleTab === "settings" && canAccessTab(accessLevel, "settings") && <SettingsTab />}
+      {visibleTab === "access" && canAccessTab(accessLevel, "access") && <AccessTab isOwner={isOwner} />}
       </div>
     </div>
   );
