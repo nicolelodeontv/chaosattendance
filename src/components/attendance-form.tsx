@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SuccessDialog } from "@/components/success-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ToastContainer, type ToastItem } from "@/components/toast";
 import {
   SUBMISSIONS_CLOSED_CODE,
   SUBMISSIONS_CLOSED_ERROR,
@@ -113,6 +114,7 @@ export function AttendanceForm({
   const [status, setStatus] = useState<RequestStatus>("idle");
   const [failureKind, setFailureKind] = useState<FailureKind>(null);
   const [error, setError] = useState("");
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [successOpen, setSuccessOpen] = useState(false);
   const [successTitle, setSuccessTitle] = useState("Attendance submitted");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -151,6 +153,21 @@ export function AttendanceForm({
     setFailureKind(null);
     setError("");
     if (status !== "submitting") setStatus("idle");
+  }
+
+  function showErrorToast(message: string) {
+    setToasts((current) => [
+      ...current,
+      {
+        id: `attendance-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        message,
+        variant: "error",
+      },
+    ]);
+  }
+
+  function dismissToast(id: string) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
   }
 
   function updateField(field: FieldName, value: string) {
@@ -281,10 +298,12 @@ export function AttendanceForm({
         setStatus("error");
         setFailureKind("auth");
         setError("You're signed out. Sign in again to submit your response.");
+        showErrorToast("You're signed out. Sign in again to submit your response.");
         return;
       }
 
       if (res.status === 409 && data.error === DUPLICATE_IGN_ERROR) {
+        showErrorToast(data.error);
         setFieldErrors((current) => ({ ...current, ign: data.error }));
         setTouched((current) => ({ ...current, ign: true }));
         setStatus("error");
@@ -295,6 +314,7 @@ export function AttendanceForm({
       }
 
       if (res.status === 409 && data.error === DUPLICATE_SUBMISSION_ERROR) {
+        showErrorToast(DUPLICATE_SUBMISSION_ERROR);
         setConfirmOpen(false);
         setStatus("error");
         setFailureKind("lock");
@@ -304,6 +324,7 @@ export function AttendanceForm({
       }
 
       if (res.status === 403 && data.code === SUBMISSIONS_CLOSED_CODE) {
+        showErrorToast(SUBMISSIONS_CLOSED_ERROR);
         setConfirmOpen(false);
         setStatus("idle");
         setFailureKind(null);
@@ -313,16 +334,20 @@ export function AttendanceForm({
       }
 
       if (res.status >= 500) {
+        const message = data.error || "Something went wrong while saving your response.";
         setStatus("error");
         setFailureKind("server");
-        setError(data.error || "Something went wrong while saving your response.");
+        setError(message);
+        showErrorToast(message);
         return;
       }
 
       if (!res.ok) {
+        const message = data.error || "Something went wrong while saving your response.";
         setStatus("error");
         setFailureKind("generic");
-        setError(data.error || "Something went wrong while saving your response.");
+        setError(message);
+        showErrorToast(message);
         return;
       }
 
@@ -336,13 +361,15 @@ export function AttendanceForm({
       setError("");
       setFailureKind(null);
       setConfirmOpen(false);
-      setSuccessTitle("Attendance submitted");
+      setSuccessTitle("Submitted ✓");
       setSuccessOpen(true);
       router.refresh();
     } catch {
+      const message = "Unable to reach the server. Check your connection and try again.";
       setStatus("error");
       setFailureKind("network");
-      setError("Unable to reach the server. Check your connection and try again.");
+      setError(message);
+      showErrorToast(message);
     }
   }
 
@@ -387,6 +414,7 @@ export function AttendanceForm({
 
   return (
     <>
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <ConfirmDialog
         open={confirmOpen}
         title="Confirm attendance submission"
