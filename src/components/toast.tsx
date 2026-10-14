@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 export type ToastItem = {
   id: string;
   message: string;
+  variant?: "success" | "error";
 };
 
 export function ToastContainer({
@@ -41,8 +42,16 @@ function Toast({
     return () => window.clearTimeout(timer);
   }, [toast.id]);
 
+  const isError = toast.variant === "error";
+
   return (
-    <div className="toast-item rounded-md border border-cyan/30 bg-panel px-4 py-3 text-sm text-cyan shadow-xl" role="status">
+    <div
+      className={[
+        "toast-item rounded-md border bg-panel px-4 py-3 text-sm shadow-xl",
+        isError ? "border-red/30 text-red" : "border-cyan/30 text-cyan",
+      ].join(" ")}
+      role={isError ? "alert" : "status"}
+    >
       {toast.message}
     </div>
   );

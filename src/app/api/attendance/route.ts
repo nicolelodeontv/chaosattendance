@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getRole, isAdmin } from "@/lib/admin";
@@ -7,7 +8,7 @@ import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import { DiscordRosterFetchError, fetchDiscordRoster, type DiscordRosterMember } from "@/lib/discord-roster";
 import { notifyDiscord } from "@/lib/discord";
 import { logServerError } from "@/lib/server-error";
-import { getSubmissionDeadline, isPastDeadline } from "@/lib/deadline";
+import { isPastDeadline } from "@/lib/deadline";
 import {
   SUBMISSIONS_CLOSED_CODE,
   SUBMISSIONS_CLOSED_ERROR,
@@ -36,7 +37,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const membership = await checkDiscordGuildMembership(discordId);
+  // These checks do not depend on each other, so start them together.
+  const [membership, settingsResult] = await Promise.all([
+    checkDiscordGuildMembership(discordId),
+    prisma.settings
+      .findUnique({
+        where: { id: 1 },
+        select: { currentOpId: true, submissionDeadline: true },
+      })
+      .then((settings) => ({ settings }))
+      .catch((error: unknown) => ({ error })),
+  ]);
+
   if (membership === "not_member") {
     return NextResponse.json(
       { error: MEMBERSHIP_REQUIRED_ERROR },
@@ -50,16 +62,16 @@ export async function POST(req: Request) {
     );
   }
 
-  let submissionDeadline: Date | null;
-  try {
-    submissionDeadline = await getSubmissionDeadline();
-  } catch (error) {
-    logServerError("Unable to read submission deadline:", error);
+  if ("error" in settingsResult) {
+    logServerError("Unable to read submission deadline:", settingsResult.error);
     return NextResponse.json(
       { error: "Unable to verify submission deadline. Please try again." },
       { status: 503 }
     );
   }
+
+  const settings = settingsResult.settings;
+  const submissionDeadline = settings?.submissionDeadline ?? null;
 
   if (isPastDeadline(submissionDeadline)) {
     return NextResponse.json(
@@ -73,9 +85,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const settings = await prisma.settings
-    .findUnique({ where: { id: 1 }, select: { currentOpId: true } })
-    .catch(() => null);
   const opId = settings?.currentOpId?.trim() || "current";
 
   const existing = await prisma.submission.findUnique({
@@ -206,7 +215,9 @@ export async function POST(req: Request) {
       },
     });
 
-    await notifyDiscord({
+    // Discord notification is a side effect. Schedule it with Vercel's
+    // request lifecycle so a slow webhook never delays the saved response.
+    const notification = notifyDiscord({
       opId,
       discordUsername: user.username ?? "Unknown",
       ign: submission.ign,
@@ -216,7 +227,17 @@ export async function POST(req: Request) {
       hours: submission.hours,
       notes: submission.notes,
       created: true,
+    }).catch((error: unknown) => {
+      console.error("[attendance] Discord notification failed", error);
     });
+
+    try {
+      waitUntil(notification);
+    } catch (error) {
+      // A notification scheduling failure must not turn a saved submission
+      // into a failed response.
+      console.error("[attendance] Unable to schedule Discord notification", error);
+    }
 
     return NextResponse.json({
       ok: true,
