@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/build.js",
     "typecheck": "tsc --noEmit",
     "start": "next start",
-    "postinstall": "prisma generate",
-    "db:push": "prisma db push",
+    "postinstall": "node scripts/prisma-generate.js",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio"
   },
   "dependencies": {
