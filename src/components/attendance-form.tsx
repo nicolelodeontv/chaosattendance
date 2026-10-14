@@ -409,7 +409,22 @@ export function AttendanceForm({
   }, [attending, hasPilot, pilotName, hours]);
 
   if (submission && !showForm) {
-    return <ReadOnlySubmissionCard submission={submission} />;
+    return (
+      <>
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+        <SuccessDialog
+          open={successOpen}
+          title={successTitle}
+          message={
+            <>
+              Your response for <strong className="font-semibold text-ink">{ign.trim()}</strong> has been recorded.
+            </>
+          }
+          onClose={() => setSuccessOpen(false)}
+        />
+        <ReadOnlySubmissionCard submission={submission} />
+      </>
+    );
   }
 
   return (
