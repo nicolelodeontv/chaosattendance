@@ -229,7 +229,10 @@ export function AdminDashboard({
         />
       )}
       {visibleTab === "roster" && (
-        <MissingMembersTab onCreated={() => setSubmissionRefreshVersion((version) => version + 1)} />
+        <MissingMembersTab
+          canCreateManualSubmission={accessLevel === "owner" || accessLevel === "admin"}
+          onCreated={() => setSubmissionRefreshVersion((version) => version + 1)}
+        />
       )}
       {visibleTab === "recentlyRemoved" && canAccessTab(accessLevel, "recentlyRemoved") && (
         <RecentlyRemovedTab
