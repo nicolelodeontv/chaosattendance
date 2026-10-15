@@ -11,9 +11,12 @@ if (
   process.exit(0);
 }
 
-const rawUrl = process.env.DATABASE_URL;
+// The pre-existing Preview DIRECT_URL is sensitive and intentionally unreadable
+// from control-plane tools. Use it directly rather than relying on env-var
+// interpolation inside the temporary branch-only DATABASE_URL override.
+const rawUrl = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL;
 if (!rawUrl) {
-  console.error("Preview database check failed: DATABASE_URL is missing.");
+  console.error("Preview database check failed: no connection URL is configured.");
   process.exit(1);
 }
 
@@ -21,12 +24,12 @@ let url;
 try {
   url = new URL(rawUrl);
 } catch {
-  console.error("Preview database check failed: DATABASE_URL is not a valid URL.");
+  console.error("Preview database check failed: configured connection is not a valid URL.");
   process.exit(1);
 }
 
 if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
-  console.error("Preview database check failed: DATABASE_URL is not PostgreSQL.");
+  console.error("Preview database check failed: configured connection is not PostgreSQL.");
   process.exit(1);
 }
 
@@ -46,7 +49,7 @@ if (isPooler) {
 
 if (projectRef !== expectedProjectRef) {
   console.error(
-    "Preview database check refused: URL target does not match the isolated CHAOS Attendance Preview project.",
+    "Preview database check refused: connection target does not match the isolated Preview project.",
     JSON.stringify({ host, port: url.port || "(default)", projectRef: projectRef ?? "unverified" })
   );
   process.exit(1);
@@ -54,14 +57,14 @@ if (projectRef !== expectedProjectRef) {
 
 if (!isPooler || url.port !== "6543") {
   console.error(
-    "Preview database check refused: Vercel Preview requires the isolated project's transaction-pooler URL on port 6543.",
+    "Preview database check refused: the isolated Preview connection must use its transaction pooler on port 6543.",
     JSON.stringify({ host, port: url.port || "(default)", projectRef })
   );
   process.exit(1);
 }
 
 const { PrismaClient } = await import("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ datasources: { db: { url: rawUrl } } });
 
 try {
   const rows = await prisma.$queryRawUnsafe(
@@ -72,11 +75,17 @@ try {
     JSON.stringify({ host, port: url.port, projectRef, database: rows[0]?.database, role: rows[0]?.role })
   );
 } catch (error) {
-  const code =
-    error && typeof error === "object" && "code" in error && typeof error.code === "string"
-      ? error.code
-      : "connection_error";
-  console.error("Preview database connection failed.", JSON.stringify({ host, port: url.port, projectRef, code }));
+  const item = error && typeof error === "object" ? error : {};
+  const code = "code" in item && typeof item.code === "string" ? item.code : "connection_error";
+  const name = "name" in item && typeof item.name === "string" ? item.name : "Error";
+  let message = "message" in item && typeof item.message === "string" ? item.message : "";
+  message = message
+    .replace(/postgres(?:ql)?:\/\/[^\s@]+@/gi, "postgresql://[REDACTED]@")
+    .slice(0, 240);
+  console.error(
+    "Preview database connection failed.",
+    JSON.stringify({ host, port: url.port, projectRef, code, name, message })
+  );
   process.exitCode = 1;
 } finally {
   await prisma.$disconnect();
