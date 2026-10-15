@@ -26,6 +26,7 @@ type InitialSubmission = {
   notes: string | null;
   createdAt: string;
   discordAvatar: string | null;
+  submittedByAdmin: boolean;
 };
 
 type Submission = InitialSubmission;
@@ -124,6 +125,7 @@ export function AttendanceForm({
     hours: false,
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const isEditingManualSubmission = Boolean(submission?.submittedByAdmin && showForm);
 
   useEffect(() => {
     setSubmission(initialSubmission);
@@ -146,6 +148,29 @@ export function AttendanceForm({
     setError("");
     setStatus("idle");
   }, [initialSubmission]);
+
+  function cancelManualEdit() {
+    if (!submission?.submittedByAdmin || status === "submitting") return;
+    setIgn(submission.ign);
+    setAttending(initialChoice(submission.attending));
+    setHasPilot(initialChoice(submission.hasPilot));
+    setPilotName(submission.pilotName ?? "");
+    setHours(String(submission.hours));
+    setNotes(submission.notes ?? "");
+    setTouched({
+      ign: false,
+      attending: false,
+      hasPilot: false,
+      pilotName: false,
+      hours: false,
+    });
+    setFieldErrors({});
+    setFailureKind(null);
+    setError("");
+    setStatus("idle");
+    setConfirmOpen(false);
+    setShowForm(false);
+  }
 
   function clearFailure() {
     setFailureKind(null);
@@ -336,7 +361,7 @@ export function AttendanceForm({
       setError("");
       setFailureKind(null);
       setConfirmOpen(false);
-      setSuccessTitle("Attendance submitted");
+      setSuccessTitle(isEditingManualSubmission ? "Attendance updated" : "Attendance submitted");
       setSuccessOpen(true);
       router.refresh();
     } catch {
@@ -382,16 +407,25 @@ export function AttendanceForm({
   }, [attending, hasPilot, pilotName, hours]);
 
   if (submission && !showForm) {
-    return <ReadOnlySubmissionCard submission={submission} />;
+    return (
+      <ReadOnlySubmissionCard
+        submission={submission}
+        onEdit={() => setShowForm(true)}
+      />
+    );
   }
 
   return (
     <>
       <ConfirmDialog
         open={confirmOpen}
-        title="Confirm attendance submission"
-        message="Submissions are final. Confirm your IGN, attendance and pilot status."
-        confirmLabel="Confirm submission"
+        title={isEditingManualSubmission ? "Confirm attendance update" : "Confirm attendance submission"}
+        message={
+          isEditingManualSubmission
+            ? "Confirm the changes to your admin-entered response."
+            : "Submissions are final. Confirm your IGN, attendance and pilot status."
+        }
+        confirmLabel={isEditingManualSubmission ? "Save changes" : "Confirm submission"}
         cancelLabel="Review"
         variant="default"
         loading={status === "submitting"}
@@ -420,10 +454,12 @@ export function AttendanceForm({
         <div className="mb-6 flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-cyan">
-              Your response
+              {isEditingManualSubmission ? "Edit your response" : "Your response"}
             </p>
             <p className="text-sm leading-6 text-ink2">
-              Complete the fields below.
+              {isEditingManualSubmission
+                ? "Review and update the response an admin entered for you."
+                : "Complete the fields below."}
             </p>
           </div>
           <div className="shrink-0 rounded-full border border-line bg-panel2 px-3 py-1.5 text-xs text-ink2">
@@ -642,20 +678,32 @@ export function AttendanceForm({
           <span>{summaryLine.split(" · ").slice(1).join(" · ")}</span>
         </div>
 
-        <button
-          type="submit"
-          disabled={status === "submitting"}
-          className="premium-button w-full disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-        >
-          {status === "submitting" ? (
-            <>
-              <Spinner />
-              <span>Submitting…</span>
-            </>
-          ) : (
-            "Submit attendance"
-          )}
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {isEditingManualSubmission ? (
+            <button
+              type="button"
+              onClick={cancelManualEdit}
+              disabled={status === "submitting"}
+              className="premium-button-secondary w-full disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              Cancel edit
+            </button>
+          ) : null}
+          <button
+            type="submit"
+            disabled={status === "submitting"}
+            className="premium-button w-full disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {status === "submitting" ? (
+              <>
+                <Spinner />
+                <span>{isEditingManualSubmission ? "Saving…" : "Submitting…"}</span>
+              </>
+            ) : (
+              isEditingManualSubmission ? "Save changes" : "Submit attendance"
+            )}
+          </button>
+        </div>
       </form>
     </>
   );
@@ -663,8 +711,10 @@ export function AttendanceForm({
 
 function ReadOnlySubmissionCard({
   submission,
+  onEdit,
 }: {
   submission: Submission;
+  onEdit: () => void;
 }) {
   return (
     <div className="premium-card p-5 sm:p-7" aria-live="polite">
@@ -677,10 +727,26 @@ function ReadOnlySubmissionCard({
             <p className="font-display text-lg text-ink">Submitted</p>
           </div>
           <p className="mt-2 text-sm leading-6 text-ink2">
-            Submissions are final. Contact an officer if you made a mistake.
+            {submission.submittedByAdmin
+              ? "An admin entered this response for you. Review it and edit it if anything needs correcting."
+              : "Submissions are final. Contact an officer if you made a mistake."}
           </p>
         </div>
+        {submission.submittedByAdmin ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="premium-button-secondary w-full shrink-0 sm:w-auto"
+          >
+            Edit response
+          </button>
+        ) : null}
       </div>
+      {submission.submittedByAdmin ? (
+        <div className="mt-4 inline-flex rounded-full border border-orange/40 bg-orange/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-orange">
+          Manual entry
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <SummaryItem label="IGN" value={submission.ign} />
