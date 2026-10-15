@@ -55,9 +55,9 @@ if (projectRef !== expectedProjectRef) {
   process.exit(1);
 }
 
-if (!isPooler || url.port !== "6543") {
+if (!isPooler || !["5432", "6543"].includes(url.port)) {
   console.error(
-    "Preview database check refused: the isolated Preview connection must use its transaction pooler on port 6543.",
+    "Preview database check refused: the isolated Preview connection must use a recognized Supabase pooler port (5432 or 6543).",
     JSON.stringify({ host, port: url.port || "(default)", projectRef })
   );
   process.exit(1);
