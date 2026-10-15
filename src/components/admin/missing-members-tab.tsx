@@ -48,7 +48,7 @@ const FALLBACK_AVATAR_URL = "https://cdn.discordapp.com/embed/avatars/0.png";
 // React unmounts MissingMembersTab. The API is refreshed only after 5 minutes.
 let cachedRosterResponse: MissingMembersResponse | null = null;
 
-export function MissingMembersTab({ onCreated }: { onCreated?: () => void }) {
+export function MissingMembersTab({ onCreated, canCreateManualSubmission = true }: { onCreated?: () => void; canCreateManualSubmission?: boolean }) {
   const [data, setData] = useState<MissingMembersResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -226,14 +226,16 @@ export function MissingMembersTab({ onCreated }: { onCreated?: () => void }) {
                   />
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openManualSubmission(member)}
-                    className="shrink-0 rounded-md border border-orange/50 bg-orange/5 px-2 py-1.5 text-xs font-semibold text-orange transition-colors hover:border-orange hover:bg-orange/10"
-                    title={"Add a manual submission for " + (member.nick || member.globalName || member.username)}
-                  >
-                    Add submission
-                  </button>
+                  {canCreateManualSubmission ? (
+                    <button
+                      type="button"
+                      onClick={() => openManualSubmission(member)}
+                      className="shrink-0 rounded-md border border-orange/50 bg-orange/5 px-2 py-1.5 text-xs font-semibold text-orange transition-colors hover:border-orange hover:bg-orange/10"
+                      title={"Add a manual submission for " + (member.nick || member.globalName || member.username)}
+                    >
+                      Add submission
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                   onClick={async () => {
