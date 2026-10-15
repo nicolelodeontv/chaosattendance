@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/admin";
+import { getRole } from "@/lib/admin";
 import { DiscordRosterFetchError, fetchDiscordRoster, type DiscordRosterMember } from "@/lib/discord-roster";
 import { logServerError } from "@/lib/server-error";
 
@@ -30,7 +30,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  if (!(await isAdmin(adminDiscordId))) {
+  const role = await getRole(adminDiscordId);
+  if (role !== "owner" && role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
