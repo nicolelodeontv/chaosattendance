@@ -54,6 +54,8 @@ export async function DELETE(
             pilotName: existing.pilotName,
             hours: existing.hours,
             notes: existing.notes,
+            submittedByAdmin: existing.submittedByAdmin,
+            enteredBy: existing.enteredBy,
             createdAt: existing.createdAt,
             deletedByDiscordId: user.discordId.trim(),
           },
