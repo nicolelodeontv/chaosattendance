@@ -20,6 +20,8 @@ type DeletedSubmission = {
   pilotName: string | null;
   hours: number;
   notes: string | null;
+  submittedByAdmin: boolean;
+  enteredBy: string | null;
   createdAt: string;
   deletedAt: string;
   deletedByDiscordId: string;
@@ -236,6 +238,9 @@ export function RecentlyRemovedTab({ onRestored, isOwner }: { onRestored: () => 
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     <p className="data-clip max-w-full font-medium text-ink" title={row.ign}>{row.ign}</p>
                     <span className="data-clip max-w-[10rem] font-display text-xs text-cyan" title={row.opId}>{row.opId}</span>
+                    {row.submittedByAdmin ? (
+                      <span title={row.enteredBy ? "Entered by admin " + row.enteredBy : "Entered manually by an admin"} className="inline-flex shrink-0 rounded-full border border-orange/40 bg-orange/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-orange">Manual</span>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-sm text-ink2"><span className="data-clip" title={row.discordUsername.trim() || row.discordId}>{row.discordUsername.trim() || row.discordId}</span></p>
                 </div>
