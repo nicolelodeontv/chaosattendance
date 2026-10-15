@@ -147,7 +147,8 @@ export function MissingMembersTab({ onCreated }: { onCreated?: () => void }) {
   }, []);
 
   return (
-    <section className="premium-card overflow-hidden">
+    <>
+      <section className="premium-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:p-5">
         <div>
           <p className="font-display text-sm text-ink">Members who haven’t submitted</p>
