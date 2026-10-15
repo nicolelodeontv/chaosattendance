@@ -61,13 +61,6 @@ export async function POST(req: Request) {
     );
   }
 
-  if (isPastDeadline(submissionDeadline)) {
-    return NextResponse.json(
-      { error: SUBMISSIONS_CLOSED_ERROR, code: SUBMISSIONS_CLOSED_CODE },
-      { status: 403 }
-    );
-  }
-
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
@@ -85,10 +78,25 @@ export async function POST(req: Request) {
         discordId,
       },
     },
-    select: { id: true },
+    select: {
+      id: true,
+      submittedByAdmin: true,
+      discordUsername: true,
+      discordAvatar: true,
+    },
   });
+  const isManualEdit = Boolean(existing?.submittedByAdmin);
 
-  if (existing) {
+  // Admin-entered responses remain editable by the member they belong to,
+  // even when the operation's submission deadline has passed.
+  if (isPastDeadline(submissionDeadline) && !isManualEdit) {
+    return NextResponse.json(
+      { error: SUBMISSIONS_CLOSED_ERROR, code: SUBMISSIONS_CLOSED_CODE },
+      { status: 403 }
+    );
+  }
+
+  if (existing && !isManualEdit) {
     return NextResponse.json(
       { error: DUPLICATE_SUBMISSION_ERROR },
       { status: 409 }
@@ -174,12 +182,13 @@ export async function POST(req: Request) {
 
   const submissionsForOp = await prisma.submission.findMany({
     where: { opId },
-    select: { ign: true },
+    select: { id: true, ign: true },
   });
 
   const normalizedIgnKey = normalizedIgn.toLowerCase();
   const duplicateIgn = submissionsForOp.some(
     (submission) =>
+      submission.id !== existing?.id &&
       submission.ign.trim().toLowerCase() === normalizedIgnKey
   );
 
@@ -191,37 +200,48 @@ export async function POST(req: Request) {
   }
 
   try {
-    const submission = await prisma.submission.create({
-      data: {
-        opId,
-        discordId,
-        discordUsername: user.username ?? "Unknown",
-        discordAvatar: user.avatar ?? null,
-        ign: normalizedIgn,
-        attending,
-        hasPilot,
-        pilotName: hasPilot ? normalizedPilotName : null,
-        hours: hoursNum,
-        notes: normalizedNotes || null,
-      },
-    });
+    const submissionData = {
+      discordUsername: user.username ?? existing?.discordUsername ?? "Unknown",
+      discordAvatar: user.avatar ?? existing?.discordAvatar ?? null,
+      ign: normalizedIgn,
+      attending,
+      hasPilot,
+      pilotName: hasPilot ? normalizedPilotName : null,
+      hours: hoursNum,
+      notes: normalizedNotes || null,
+      submittedByAdmin: false,
+      enteredBy: null,
+      ...(isManualEdit ? { createdAt: new Date() } : {}),
+    };
+    const submission = isManualEdit && existing
+      ? await prisma.submission.update({
+          where: { id: existing.id },
+          data: submissionData,
+        })
+      : await prisma.submission.create({
+          data: {
+            ...submissionData,
+            opId,
+            discordId,
+          },
+        });
 
     await notifyDiscord({
       opId,
-      discordUsername: user.username ?? "Unknown",
+      discordUsername: submission.discordUsername,
       ign: submission.ign,
       attending: submission.attending,
       hasPilot: submission.hasPilot,
       pilotName: submission.pilotName,
       hours: submission.hours,
       notes: submission.notes,
-      created: true,
+      created: !isManualEdit,
     });
 
     return NextResponse.json({
       ok: true,
       id: submission.id,
-      created: true,
+      created: !isManualEdit,
       submission: {
         id: submission.id,
         opId: submission.opId,
@@ -233,6 +253,8 @@ export async function POST(req: Request) {
         pilotName: submission.pilotName,
         hours: submission.hours,
         notes: submission.notes,
+        submittedByAdmin: submission.submittedByAdmin,
+        enteredBy: submission.enteredBy,
         createdAt: submission.createdAt.toISOString(),
       },
     });
