@@ -47,6 +47,8 @@ type Submission = {
   pilotName: string | null;
   hours: number;
   notes: string | null;
+  submittedByAdmin: boolean;
+  enteredBy: string | null;
   createdAt: string;
   role: UserRole;
 };
@@ -226,7 +228,9 @@ export function AdminDashboard({
           externalRefreshVersion={submissionRefreshVersion}
         />
       )}
-      {visibleTab === "roster" && <MissingMembersTab />}
+      {visibleTab === "roster" && (
+        <MissingMembersTab onCreated={() => setSubmissionRefreshVersion((version) => version + 1)} />
+      )}
       {visibleTab === "recentlyRemoved" && canAccessTab(accessLevel, "recentlyRemoved") && (
         <RecentlyRemovedTab
           isOwner={isOwner}
@@ -996,7 +1000,19 @@ function SubmissionsTab({
               <td data-label="Pilot" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink2">{r.hasPilot ? "Have Pilot — " + (r.pilotName ?? "") : "No Pilot"}</td>
               <td data-label="Hours" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink2">{r.hours}</td>
               <td data-label="Notes" className="data-cell notes-cell w-full min-w-0 max-w-0 truncate whitespace-nowrap align-middle px-2 py-3 text-ink2" title={r.notes ?? "—"}>{r.notes ?? "—"}</td>
-              <td data-label="Submitted" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink2">{new Date(r.createdAt).toLocaleDateString()}</td>
+              <td data-label="Submitted" className="data-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-ink2">
+                <div className="flex flex-nowrap items-center gap-1.5 whitespace-nowrap">
+                  <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                  {r.submittedByAdmin ? (
+                    <span
+                      title={r.enteredBy ? "Entered by admin " + r.enteredBy : "Entered manually by an admin"}
+                      className="inline-flex shrink-0 rounded-full border border-orange/40 bg-orange/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-orange"
+                    >
+                      Manual
+                    </span>
+                  ) : null}
+                </div>
+              </td>
               <td data-label="Actions" className="actions-cell w-px min-w-fit whitespace-nowrap align-middle px-2 py-3 text-right">
                 <div className="flex flex-nowrap items-center justify-end gap-2">
                   <button
