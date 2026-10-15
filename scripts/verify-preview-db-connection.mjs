@@ -1,5 +1,5 @@
 // Guarded, read-only Preview DB check for PR #54.
- // This only runs on the dedicated feature preview branch. It refuses direct
+// This only runs on the dedicated feature preview branch. It refuses direct
 // endpoints, unknown hosts, and any project ref other than CHAOS Attendance Preview.
 const targetBranch = "feature/manual-missing-member-submissions-20261015";
 const expectedProjectRef = "hfsydxrpvlguwwlhgrbo";
@@ -37,8 +37,7 @@ let projectRef = null;
 
 if (isPooler) {
   const username = decodeURIComponent(url.username);
-  const expectedUsernameSuffix = "." + expectedProjectRef;
-  if (username.endsWith(expectedUsernameSuffix)) {
+  if (username === "postgres." + expectedProjectRef) {
     projectRef = expectedProjectRef;
   }
 } else if (isDirect) {
