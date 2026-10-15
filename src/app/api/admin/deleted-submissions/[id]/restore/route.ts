@@ -66,6 +66,8 @@ export async function POST(
           pilotName: archived.pilotName,
           hours: archived.hours,
           notes: archived.notes,
+          submittedByAdmin: archived.submittedByAdmin,
+          enteredBy: archived.enteredBy,
           createdAt: archived.createdAt,
         },
       });
