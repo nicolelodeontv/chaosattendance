@@ -102,6 +102,7 @@ export default async function Home({
           notes: true,
           discordAvatar: true,
           createdAt: true,
+          submittedByAdmin: true,
         },
       }).catch(() => null)
     : null;
@@ -185,6 +186,7 @@ export default async function Home({
                           notes: ownSubmission.notes,
                           createdAt: ownSubmission.createdAt.toISOString(),
                           discordAvatar: ownSubmission.discordAvatar,
+                          submittedByAdmin: ownSubmission.submittedByAdmin,
                         }
                       : null
                   }

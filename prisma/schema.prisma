@@ -19,6 +19,8 @@ model Submission {
   pilotName         String?
   hours             Float
   notes             String?
+  submittedByAdmin  Boolean  @default(false)
+  enteredBy         String?
   createdAt         DateTime @default(now())
 
   @@unique([opId, discordId])
@@ -40,6 +42,8 @@ model DeletedSubmission {
   pilotName         String?
   hours             Float
   notes             String?
+  submittedByAdmin  Boolean  @default(false)
+  enteredBy         String?
   createdAt         DateTime
   deletedAt         DateTime @default(now())
   deletedByDiscordId String
