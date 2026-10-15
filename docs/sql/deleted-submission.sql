@@ -11,11 +11,18 @@ CREATE TABLE IF NOT EXISTS "DeletedSubmission" (
   "pilotName" TEXT,
   "hours" DOUBLE PRECISION NOT NULL,
   "notes" TEXT,
+  "submittedByAdmin" BOOLEAN NOT NULL DEFAULT FALSE,
+  "enteredBy" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL,
   "deletedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "deletedByDiscordId" TEXT NOT NULL,
   CONSTRAINT "DeletedSubmission_pkey" PRIMARY KEY ("id")
 );
+
+ALTER TABLE "DeletedSubmission"
+  ADD COLUMN IF NOT EXISTS "submittedByAdmin" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE "DeletedSubmission"
+  ADD COLUMN IF NOT EXISTS "enteredBy" TEXT;
 
 CREATE INDEX IF NOT EXISTS "DeletedSubmission_deletedAt_idx"
   ON "DeletedSubmission"("deletedAt");
