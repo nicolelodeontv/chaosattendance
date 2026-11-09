@@ -61,29 +61,40 @@ Vercel build.
 
 ### Owner
 
-The account matching `OWNER_DISCORD_ID` is the owner.
+The account matching `OWNER_DISCORD_ID` is the owner. The owner has every
+permission below, plus these owner-only actions:
 
-Owner-only actions include:
-
-- Settings
-- Access management
-- Single submission deletion
+- Access management (add or remove admins and assign the Admin or Manager role)
 - Bulk submission deletion
-- Recently removed and restore
+- Permanently clearing the Recently removed archive
 
 Owner recognition is enforced server-side.
 
-### Additional admins
+### Managers
 
-Additional admins can work with the submission log and notifications, including:
+Managers can do everything an Admin can, plus:
+
+- Settings (current op, submission deadline and Discord notification configuration)
+
+They do not receive Access management, bulk deletion, or the ability to clear
+the Recently removed archive.
+
+### Admins
+
+Additional admins (added by the owner under Admin → Access) can work with the
+submission log, the archive and notifications, including:
 
 - View and filter submissions
-- Reset submissions
+- Reset a single submission (it is archived first)
+- View Recently removed and restore submissions from it
 - Export submissions
 - View admin notifications
+- View the Missing members roster
 
-They do not receive owner-only Settings, Access, bulk-delete, or Recently
-Removed/restore controls.
+They do not receive Settings, Access management, bulk deletion, or the ability to
+clear the Recently removed archive.
+
+All role checks are enforced server-side, even when a client hides a control.
 
 ### Members
 
@@ -194,8 +205,8 @@ The admin notification panel polls for recent submission events and keeps unread
 state in the browser. Notification failures do not block successful attendance
 writes.
 
-Discord notification configuration can be managed from the owner-only Settings
-area. Webhook values are kept server-side.
+Discord notification configuration can be managed from the Settings area (owner
+and managers). Webhook values are kept server-side.
 
 ## Project layout
 
