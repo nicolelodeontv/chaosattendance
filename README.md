@@ -28,6 +28,8 @@ secrets.
 | `AUTH_DISCORD_SECRET` | Discord OAuth client secret |
 | `DISCORD_GUILD_ID` | Chaos Discord server ID used for membership verification |
 | `DISCORD_BOT_TOKEN` | Server-side Discord bot token used for membership verification |
+| `DISCORD_MEMBER_ROLE_ID` | Optional. Members must also hold this role to submit; also filters Missing members |
+| `DISCORD_ROSTER_CHANNEL_ID` | Optional. Missing members only counts people who can View Channel here |
 | `OWNER_DISCORD_ID` | Discord ID that receives owner access |
 | `DISCORD_WEBHOOK_URL` | Default Discord notification webhook |
 

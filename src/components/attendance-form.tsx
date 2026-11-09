@@ -10,6 +10,7 @@ import {
   SUBMISSIONS_CLOSED_CODE,
   SUBMISSIONS_CLOSED_ERROR,
 } from "@/lib/deadline-constants";
+import { MAX_HOURS } from "@/lib/hours";
 type FieldName = "ign" | "attending" | "hasPilot" | "pilotName" | "hours";
 type FieldErrors = Partial<Record<FieldName, string>>;
 type TouchedFields = Record<FieldName, boolean>;
@@ -75,9 +76,11 @@ function validateField(
 
   if (!value.trim()) return "Enter your hours.";
   const numericValue = Number(value);
-  return Number.isFinite(numericValue) && numericValue >= 0
+  return Number.isFinite(numericValue) &&
+    numericValue >= 0 &&
+    numericValue <= MAX_HOURS
     ? ""
-    : "Hours must be a number, 0 or higher.";
+    : `Hours must be a number between 0 and ${MAX_HOURS.toLocaleString("en-US")}.`;
 }
 
 function formatSubmittedAt(value: string) {

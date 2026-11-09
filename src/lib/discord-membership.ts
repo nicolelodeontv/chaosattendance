@@ -2,6 +2,10 @@ export type DiscordMembershipStatus = "member" | "not_member" | "unavailable";
 
 const NOT_MEMBER_DISCORD_CODES = new Set([10007, 10013]);
 
+// A hung Discord request would otherwise stall every submission. A timeout is
+// caught below and reported as "unavailable", which is never cached.
+const DISCORD_REQUEST_TIMEOUT_MS = 5_000;
+
 // Reuse recent positive bot-token checks on warm serverless instances.
 // Negative and unavailable results are never cached, so revoked/new access and
 // temporary Discord outages are picked up immediately on the next request.
@@ -83,6 +87,7 @@ export async function checkDiscordGuildMembership(
           {
             headers: { Authorization: "Bearer " + accessToken },
             cache: "no-store",
+            signal: AbortSignal.timeout(DISCORD_REQUEST_TIMEOUT_MS),
           }
         )
       : await fetch(
@@ -96,6 +101,7 @@ export async function checkDiscordGuildMembership(
                 "Bot " + (process.env.DISCORD_BOT_TOKEN?.trim() ?? ""),
             },
             cache: "no-store",
+            signal: AbortSignal.timeout(DISCORD_REQUEST_TIMEOUT_MS),
           }
         );
 

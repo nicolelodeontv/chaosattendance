@@ -7,6 +7,7 @@ import { checkDiscordGuildMembership } from "@/lib/discord-membership";
 import { DiscordRosterFetchError, fetchDiscordRoster, type DiscordRosterMember } from "@/lib/discord-roster";
 import { notifyDiscord } from "@/lib/discord";
 import { logServerError } from "@/lib/server-error";
+import { MAX_HOURS, parseHours } from "@/lib/hours";
 import { getSubmissionDeadline, isPastDeadline } from "@/lib/deadline";
 import {
   SUBMISSIONS_CLOSED_CODE,
@@ -154,10 +155,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const hoursNum = Number(hours);
-  if (!Number.isFinite(hoursNum) || hoursNum < 0) {
+  const hoursNum = parseHours(hours);
+  if (hoursNum === null) {
     return NextResponse.json(
-      { error: "Hours must be a valid number" },
+      { error: `Hours must be a number between 0 and ${MAX_HOURS}.` },
       { status: 400 }
     );
   }
@@ -280,10 +281,16 @@ export async function POST(req: Request) {
 export async function GET() {
   const session = await auth();
   const user = session?.user as any;
+  const discordId =
+    typeof user?.discordId === "string" ? user.discordId.trim() : "";
 
-  const membership = await checkDiscordGuildMembership(
-    typeof user?.discordId === "string" ? user.discordId.trim() : ""
-  );
+  // Signed-out callers previously fell through to the membership check with an
+  // empty ID, which logged a config error and answered 503 instead of 401.
+  if (!discordId) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  const membership = await checkDiscordGuildMembership(discordId);
   if (membership === "not_member") {
     return NextResponse.json(
       { error: MEMBERSHIP_REQUIRED_ERROR },
