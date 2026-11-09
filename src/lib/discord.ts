@@ -75,6 +75,8 @@ export async function notifyDiscord(sub: SubmissionPayload) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      // The submission is already saved; don't let a slow webhook hold the response.
+      signal: AbortSignal.timeout(5_000),
     });
 
     if (!response.ok) {

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getRole } from "@/lib/admin";
 import { DiscordRosterFetchError, fetchDiscordRoster, type DiscordRosterMember } from "@/lib/discord-roster";
 import { logServerError } from "@/lib/server-error";
+import { MAX_HOURS, parseHours } from "@/lib/hours";
 
 const MAX_NOTES_LENGTH = 500;
 const MAX_IGN_LENGTH = 64;
@@ -91,9 +92,9 @@ export async function POST(req: Request) {
   ) {
     return NextResponse.json({ error: "Hours are required." }, { status: 400 });
   }
-  const hoursNum = Number(hours);
-  if (!Number.isFinite(hoursNum) || hoursNum < 0) {
-    return NextResponse.json({ error: "Hours must be a valid non-negative number." }, { status: 400 });
+  const hoursNum = parseHours(hours);
+  if (hoursNum === null) {
+    return NextResponse.json({ error: `Hours must be a number between 0 and ${MAX_HOURS}.` }, { status: 400 });
   }
 
   if (notes !== undefined && notes !== null && typeof notes !== "string") {
